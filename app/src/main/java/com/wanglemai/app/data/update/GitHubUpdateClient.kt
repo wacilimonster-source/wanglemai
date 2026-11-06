@@ -12,17 +12,46 @@ import java.net.URL
 
 class GitHubUpdateClient(
     private val currentVersion: String,
-    private val apiUrl: String = UpdateChecker.LATEST_RELEASE_API
+    private val apiUrl: String = UpdateChecker.LATEST_RELEASE_API,
+    private val mirrorManifestUrl: String = UpdateChecker.MIRROR_MANIFEST_URL,
+    private val timeoutMillis: Int = 6_000,
+    private val textFetcher: ((String) -> String)? = null
 ) {
     suspend fun check(): UpdateCheckResult = withContext(Dispatchers.IO) {
+        try {
+            fetch(apiUrl) { UpdateChecker.parseLatestRelease(it, currentVersion) }
+        } catch (_: UpdateException) {
+            // GitHub is canonical; jsDelivr is only a reachability fallback.
+            try {
+                fetch(cacheBusted(mirrorManifestUrl)) {
+                    UpdateChecker.parseManifest(it, currentVersion)
+                }
+            } catch (_: UpdateException) {
+                throw UpdateException("GitHub 与国内加速源均不可用，请检查网络后重试")
+            }
+        }
+    }
+
+    private fun fetch(url: String, parser: (String) -> UpdateCheckResult): UpdateCheckResult {
+        textFetcher?.let { fetcher ->
+            val body = try {
+                fetcher(url)
+            } catch (e: UpdateException) {
+                throw e
+            } catch (_: Exception) {
+                throw UpdateException("网络连接失败，请检查网络后重试")
+            }
+            return parser(body)
+        }
         val connection = try {
-            (URL(apiUrl).openConnection() as HttpURLConnection).apply {
+            (URL(url).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                connectTimeout = 8_000
-                readTimeout = 8_000
+                connectTimeout = timeoutMillis
+                readTimeout = timeoutMillis
                 instanceFollowRedirects = true
-                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("Accept", "application/json, application/vnd.github+json")
                 setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+                setRequestProperty("Cache-Control", "no-cache")
                 setRequestProperty("User-Agent", "wanglemai-android")
             }
         } catch (_: Exception) {
@@ -35,7 +64,7 @@ class GitHubUpdateClient(
                     val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use {
                         readLimited(it, 2 * 1024 * 1024)
                     }
-                    UpdateChecker.parseLatestRelease(body, currentVersion)
+                    return parser(body)
                 }
                 404 -> throw UpdateException("仓库还没有发布版本")
                 403, 429 -> throw UpdateException("GitHub 暂时限制请求，请稍后再试")
@@ -48,6 +77,11 @@ class GitHubUpdateClient(
         } finally {
             connection.disconnect()
         }
+    }
+
+    private fun cacheBusted(url: String): String {
+        val separator = if (url.contains('?')) '&' else '?'
+        return "$url${separator}t=${System.currentTimeMillis()}"
     }
 
     private fun readLimited(reader: Reader, maxChars: Int): String {

@@ -1,4 +1,4 @@
-# 忘了没 · Android MVP 交付 v0.2.0
+# 忘了没 · Android MVP 交付 v0.2.1
 
 日期：2026-11-06。状态：**原生 MVP 功能已实现并在 Android 14/API34 模拟器完成自动化验证**；澎湃 OS 3 真机、负一屏、API26/31/36、TalkBack 人工验收和性能目标仍未验证。目标系统已确认澎湃 OS 3，手机型号与负一屏支持情况待补。
 
@@ -7,10 +7,10 @@
 - GitHub 仓库：<https://github.com/wacilimonster-source/wanglemai>
 - GitHub Releases（检查更新使用）：<https://github.com/wacilimonster-source/wanglemai/releases>
 - 原生工程：`app/`，Kotlin + Jetpack Compose/Material3 + Room + Coroutines/StateFlow。
-- Debug APK：[wanglemai-0.2.0-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.0/wanglemai-0.2.0-debug.apk)（versionCode 2，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
-- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)。
+- Debug APK：[wanglemai-0.2.1-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.1/wanglemai-0.2.1-debug.apk)（versionCode 3，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
+- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.2.1 APK SHA256 `76a2b6a971cf945ad71774e178af301978685e5ffd2c2a859543624f5a7edc1a`。
 - 实测记录：[开发记录](docs/development-log.md)、[验收记录](docs/03-acceptance.md)、[框架状态](docs/07-framework-status.md)。
-- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.2.0.txt)、[设备测试](docs/evidence/android-instrumentation-0.2.0.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.2.0.json)。
+- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.2.1.txt)、[设备测试](docs/evidence/android-instrumentation-0.2.1.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.2.1.json)。
 
 ## 已实现的产品能力
 
@@ -23,7 +23,7 @@
 - Widget 的新增/正文/标题点击直接通过 `PendingIntent.getActivity` 进入 `QuickEntryActivity`，没有 Receiver/Service 间接启动编辑页。
 - SAF JSON 导出与导入：5MB 上限、严格 schema 校验、预览数量、事务合并、同 ID 保留本机、名称冲突加“（导入N）”、失败不部分写库。
 - 浅/深色主题；应用主题可跟随系统或显式切换。
-- 设置页“检查更新”：按 GitHub Releases 查找新版本，可打开发布页或下载 APK；仅手动触发，不自动下载/安装。
+- 设置页“检查更新”：GitHub Releases API 优先，失败时回退到 jsDelivr 静态清单；显示版本、SHA256、GitHub/国内加速下载和发布页。仅手动触发，不自动下载/安装。
 
 ## 快速构建与测试
 
@@ -37,7 +37,15 @@ adb -s emulator-5558 install -r app\build\outputs\apk\androidTest\debug\app-debu
 adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-实际结果：JVM 33/33 通过；设备 29/29 通过（`OK (29 tests)`）。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
+实际结果：JVM 38/38 通过；设备 29/29 通过（`OK (29 tests)`）。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
+
+## 发布新版本
+
+1. 更新 `app/build.gradle.kts` 的 versionCode/versionName。
+2. 构建并复制 APK 到 `releases/`。
+3. 生成国内回退清单：`python scripts/update-manifest.py vX.Y.Z releases/wanglemai-X.Y.Z-debug.apk --release-name "忘了没 vX.Y.Z MVP"`。
+4. 提交、打 tag、推送，并在 GitHub 创建 Release，上传 APK 资产。
+5. jsDelivr 静态清单使用 `@main`，可能有缓存延迟；APK 加速链接使用 tag，避免内容漂移。
 
 ## 安装与添加小部件
 
@@ -76,3 +84,4 @@ adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.t
 - 系统重启只验证了 App 数据恢复；真实桌面小部件实例在重启/APK 升级后的恢复未在系统 Launcher 上验证。
 - 数据库写满/存储失败未做故障注入；输入保留与重试由实现保证但未专门测试。
 - 草稿 onStop 写盘不能保证突然断电前最后 300ms 的输入。
+- jsDelivr 国内 CDN 的可用性不保证；失败时仍可使用 GitHub 下载，公开分发的 debug 签名不应作为安全更新身份。

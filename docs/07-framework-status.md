@@ -1,4 +1,4 @@
-# Android MVP 实现状态 v0.2.0
+# Android MVP 实现状态 v0.2.1
 
 更新日期：2026-11-06。此文件区分“已实现源码/模拟器实测”与“仍需真机验收”的范围。完整目标见产品规格与验收清单；实际命令与结果见 [开发记录](development-log.md)。
 
@@ -12,7 +12,7 @@
 - 批量：CRLF/LF、trim、忽略空行、1～50 条、错误行号、整批事务、commandId 防重。
 - 草稿：`create:{listId}` / `edit:{itemId}`，300ms debounce、onStop 补写、恢复/丢弃、版本冲突提示、保存成功清除；写盘带 epoch 防旧草稿覆盖。
 - App：清单选择与类型记忆、搜索、未完成/已完成、完成恢复、管理清单、设置、主题、SAF 备份导出/导入预览与事务合并。
-- 更新检查：设置页手动读取 GitHub Releases latest，比较版本并展示发布页/APK 下载入口；不自动下载或安装，无后台轮询。
+- 更新检查：设置页手动读取 GitHub Releases latest；失败时回退到 jsDelivr 静态清单；展示发布页、GitHub 下载、国内加速下载和 SHA256；不自动下载或安装，无后台轮询。
 - 快速编辑：独立 `QuickEntryActivity`，底部面板样式，自动聚焦并请求 IME，返回优先收键盘，Back/取消保留草稿，键盘不遮挡保存。
 - Widget：标准/大号两个 Provider，XML RemoteViews；每实例 listId/theme/density；多实例独立；尺寸/字体缩放计算行数；显式浅/深色资源；完成、撤销、冲突页脚、空态/错误态；写入后主动刷新。
 - 交互链路：Widget 新增/正文/标题直接 `PendingIntent.getActivity`；完成通过内部 Receiver（`goAsync`）执行，不使用 Activity trampoline、Service 或常驻后台服务。
@@ -35,9 +35,9 @@ adb -s <明确选定的设备> install -r app\build\outputs\apk\androidTest\debu
 adb -s <明确选定的设备> shell am instrument -w -r com.wanglemai.app.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-在约定环境（`emulator-5558`，Android14/API34，sdk_gphone64_x86_64）实际结果：JVM 33/33、设备 29/29 通过。不要向所有已连接设备批量安装；其他连接设备未操作。`connectedDebugAndroidTest` 的 UTP 结果回传在该环境有已知告警，以 `am instrument` 的 `OK (N tests)` 和测试 XML 为准。
+在约定环境（`emulator-5558`，Android14/API34，sdk_gphone64_x86_64）实际结果：JVM 38/38、设备 29/29 通过。不要向所有已连接设备批量安装；其他连接设备未操作。`connectedDebugAndroidTest` 的 UTP 结果回传在该环境有已知告警，以 `am instrument` 的 `OK (N tests)` 和测试 XML 为准。
 
-GitHub 仓库：<https://github.com/wacilimonster-source/wanglemai>。现成 APK：[wanglemai-0.2.0-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.0/wanglemai-0.2.0-debug.apk)。设置页的“检查更新”读取该仓库 GitHub Releases 的 latest。
+GitHub 仓库：<https://github.com/wacilimonster-source/wanglemai>。现成 APK：[wanglemai-0.2.1-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.1/wanglemai-0.2.1-debug.apk)。设置页的“检查更新”优先读取 GitHub Releases latest，失败时回退到 jsDelivr 静态清单；国内加速下载仍只打开浏览器并显示 SHA256。
 
 ## 未完成/未验收
 

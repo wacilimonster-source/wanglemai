@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-06",
+  "versionName": "0.2.1-mvp",
+  "versionCode": 3,
+  "device": {
+    "serial": "emulator-5558",
+    "avd": "pika_test",
+    "androidApi": 34,
+    "androidRelease": "14",
+    "model": "sdk_gphone64_x86_64",
+    "display": "1080x1920 (physical 1080x2400)",
+    "densityDpi": 420
+  },
+  "jvm": {
+    "tests": 38,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": {
+      "ValidationTest": 13,
+      "BackupCodecTest": 12,
+      "UpdateCheckerTest": 13
+    }
+  },
+  "instrumentation": {
+    "tests": 29,
+    "failures": 0,
+    "skipped": 0,
+    "result": "OK (29 tests)",
+    "suites": {
+      "RepositoryTest": 16,
+      "FrameworkUiTest": 13
+    },
+    "evidence": "android-instrumentation-0.2.1.txt"
+  },
+  "lint": "pass (0 errors)",
+  "apk": {
+    "path": "releases/wanglemai-0.2.1-debug.apk",
+    "sha256": "76a2b6a971cf945ad71774e178af301978685e5ffd2c2a859543624f5a7edc1a",
+    "signature": "APK Signature Scheme v2 verified; debug keystore",
+    "permissions": ["android.permission.INTERNET", "com.wanglemai.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"]
+  },
+  "update": {
+    "githubApi": "https://api.github.com/repos/wacilimonster-source/wanglemai/releases/latest",
+    "fallbackManifest": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@main/update/latest.json",
+    "acceleratedApk": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.2.1/releases/wanglemai-0.2.1-debug.apk",
+    "behavior": "GitHub API first; jsDelivr manifest fallback; browser download only; SHA256 shown"
+  },
+  "manualChecks": [
+    "SAF export and import after pm clear",
+    "force-stop and reboot data recovery",
+    "light/dark and 200% font",
+    "two widget sizes and independent instances",
+    "GitHub update check latest v0.2.0 before 0.2.1 release"
+  ],
+  "notVerified": [
+    "Xiaomi HyperOS 3 physical device and App Vault",
+    "API 26/31/36 runtime",
+    "TalkBack human acceptance",
+    "real launcher widget after reboot/upgrade/process kill",
+    "performance P95",
+    "database storage-full failure",
+    "release-signed APK and in-app APK hash verification"
+  ]
+}

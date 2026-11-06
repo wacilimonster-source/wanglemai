@@ -32,9 +32,12 @@
 | AC26 | 完全断网并未允许后台自启动 | 核心新增/查看/完成仍可用；定时刷新不作为核心依赖 |
 | AC27 | TalkBack、键盘导航、触控 | 圆圈正文独立播报，触控目标≥48dp；错误可感知 |
 
-## 0.2.0 实测记录（2026-11-06）
+## 0.2.x 实测记录（2026-11-06）
 
-环境：`emulator-5558`，Android 14/API34，sdk_gphone64_x86_64，1080x1920（420dpi）。未使用小米真机。自动化结果：JVM 33/33、设备 29/29；证据见 [开发记录](development-log.md) 与 [设备测试](evidence/android-instrumentation-0.2.0.txt)。
+环境：`emulator-5558`，Android 14/API34，sdk_gphone64_x86_64，1080x1920（420dpi）。未使用小米真机。
+
+- 0.2.0 基线：JVM 33/33、设备 29/29（[设备测试](evidence/android-instrumentation-0.2.0.txt)）。
+- 0.2.1 更新检查回退：JVM 38/38、设备 29/29（[设备测试](evidence/android-instrumentation-0.2.1.txt)）；新增 `UpdateCheckerTest` 13 项覆盖 GitHub JSON、jsDelivr 清单、加速 URL、哈希、GitHub 失败回退与双源失败。
 
 | ID | 结果 | 证据 / 说明 |
 |---|---|---|
@@ -68,7 +71,7 @@
 
 补充：SAF 导出文件 1678 bytes；导入预览显示 2 个清单、3 条记录，新增 0 个清单、3 条记录，跳过 2 项。系统 light/dark 与 200% 字体截图见 [开发记录](development-log.md)。
 
-新增（用户授权范围）：设置页 GitHub Releases 检查更新。JVM `UpdateCheckerTest` 8 项通过；设备手动验证发布前 404 文案、发布后“已是最新版本：v0.2.0”和打开发布页进入 Chrome。该功能需要 INTERNET，仅手动触发，不自动下载/安装。
+新增（用户授权范围）：设置页 GitHub Releases 检查更新。0.2.1 起 GitHub API 失败会回退到 jsDelivr 静态清单，并提供 GitHub/国内加速下载入口和 SHA256。前期设备手动验证发布前 404 文案、发布后“已是最新版本：v0.2.0”和打开发布页进入 Chrome；`UpdateCheckerTest` 13 项覆盖回退逻辑。该功能需要 INTERNET，仅手动触发，不自动下载/安装。
 
 ## 性能目标（真机目标，不是已测结果）
 

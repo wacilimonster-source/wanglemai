@@ -232,15 +232,33 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
             )
+            if (result.viaAcceleratedSource) {
+                Text("已通过国内加速清单检查", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (result.isNewer && result.apkUrl != null) {
                     Button(onClick = { openUrl(context, result.apkUrl, scope, snack) }) {
-                        Text("下载 APK")
+                        Text("GitHub 下载")
+                    }
+                }
+                if (result.isNewer && result.apkMirrorUrl != null) {
+                    OutlinedButton(onClick = { openUrl(context, result.apkMirrorUrl, scope, snack) }) {
+                        Text("国内加速下载")
                     }
                 }
                 TextButton(onClick = { openUrl(context, result.releaseUrl, scope, snack) }) {
                     Text("打开发布页")
                 }
+            }
+            if (result.isNewer) {
+                result.sha256?.let {
+                    Text("SHA256：$it", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text("国内加速由 jsDelivr 提供；安装前请核对 SHA256。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 

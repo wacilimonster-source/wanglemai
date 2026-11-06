@@ -1,6 +1,43 @@
 # Android 开发与交接记录
 
-## 当前交付：0.2.0-mvp / 2026-11-06
+## 当前交付：0.2.1-mvp / 2026-11-06
+
+在 0.2.0 基础上增加更新检查的国内可达性兜底，版本升为 versionCode 3 / versionName 0.2.1-mvp。
+
+### 本次变更
+
+- `GitHubUpdateClient`：GitHub Releases API 优先；网络/HTTP/解析失败时回退到仓库内 `update/latest.json` 的 jsDelivr 清单。
+- 更新结果包含 SHA256、GitHub APK、jsDelivr 国内加速 APK、Release 页；仍只打开浏览器，不自动下载/安装。
+- jsDelivr 清单地址：`https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@main/update/latest.json`。
+- 增加 `scripts/update-manifest.py`，发布时从本地 APK 生成版本、哈希和下载链接清单。
+- 仅新增 INTERNET 权限；没有后台轮询或账户。
+- 当前仍为 debug 签名；正式公开分发前应改为 release 签名。
+
+### 实际结果
+
+| 检查 | 结果 | 证据 |
+|---|---|---|
+| Debug/AndroidTest 构建 | 通过 | docs/evidence/android-build-0.2.1.txt |
+| JVM 单元测试 | 38/38 通过 | ValidationTest 13、BackupCodecTest 12、UpdateCheckerTest 13 |
+| 设备/Room/UI/Widget | 29/29 通过，`OK (29 tests)` | docs/evidence/android-instrumentation-0.2.1.txt |
+| Android Lint | 0 error | docs/evidence/android-lint-0.2.1.txt |
+| APK SHA256 | `76a2b6a971cf945ad71774e178af301978685e5ffd2c2a859543624f5a7edc1a` | releases/SHA256SUMS.txt |
+
+`UpdateCheckerTest` 覆盖 GitHub JSON、jsDelivr 清单、SHA256、国内加速 URL、GitHub 成功不访问镜像、GitHub 失败回退、双源失败等 13 项。
+
+### 发布信息
+
+- 仓库：<https://github.com/wacilimonster-source/wanglemai>
+- Release：<https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.2.1>
+- GitHub APK：<https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.1/wanglemai-0.2.1-debug.apk>
+- 国内加速 APK：<https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.2.1/releases/wanglemai-0.2.1-debug.apk>
+- 静态清单：<https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@main/update/latest.json>
+
+发布后还需在旧 0.2.0 安装上实测“发现新版本 v0.2.1”和两个下载入口；此条在完成后补记。
+
+---
+
+## 历史：0.2.0-mvp / 2026-11-06
 
 原生 MVP 功能已实现，并在明确选定的 Android 14/API34 模拟器上完成构建、JVM、Room、界面和 Widget 宿主测试；未在小米真机或负一屏验证。
 
