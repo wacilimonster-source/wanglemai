@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-06",
+  "versionName": "0.2.0-mvp",
+  "versionCode": 2,
+  "device": {
+    "serial": "emulator-5558",
+    "avd": "pika_test",
+    "androidApi": 34,
+    "androidRelease": "14",
+    "model": "sdk_gphone64_x86_64",
+    "display": "1080x1920 (physical 1080x2400)",
+    "densityDpi": 420
+  },
+  "jvm": {
+    "tests": 33,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": {
+      "ValidationTest": 13,
+      "BackupCodecTest": 12,
+      "UpdateCheckerTest": 8
+    }
+  },
+  "instrumentation": {
+    "tests": 29,
+    "failures": 0,
+    "skipped": 0,
+    "result": "OK (29 tests)",
+    "suites": {
+      "RepositoryTest": 16,
+      "FrameworkUiTest": 13
+    },
+    "evidence": "android-instrumentation-0.2.0.txt"
+  },
+  "lint": "pass (0 errors)",
+  "apk": {
+    "path": "releases/wanglemai-0.2.0-debug.apk",
+    "sha256": "e10616e56212ae80b356936f3881f2bd487ab20362218b0b51055e596527db90",
+    "signature": "APK Signature Scheme v2 verified",
+    "permissions": ["android.permission.INTERNET", "com.wanglemai.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"]
+  },
+  "manualChecks": [
+    "SAF export through DocumentsUI to /sdcard/Download",
+    "pm clear then SAF import preview and merge restored 3 records",
+    "force-stop then cold launch retained records",
+    "emulator reboot then launch retained records",
+    "system night mode light/dark screenshots",
+    "font scale 200% app and widget core controls",
+    "GitHub update check returns a clear no-release result before publishing"
+  ],
+  "notVerified": [
+    "Xiaomi HyperOS 3 physical device",
+    "HyperOS 3 App Vault (negative screen)",
+    "API 26/31/36 runtime",
+    "TalkBack human acceptance",
+    "real launcher widget after reboot/upgrade/process kill",
+    "performance P95",
+    "database storage-full failure"
+  ]
+}

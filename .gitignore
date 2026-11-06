@@ -1,0 +1,11 @@
+node_modules/
+test-results/
+.DS_Store
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+
+# Local handoff archives are generated bundles, not source
+wanglemai-design-handoff-v*.zip

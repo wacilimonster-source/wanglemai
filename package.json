@@ -1,0 +1,8 @@
+{
+  "name": "wanglemai-design-handoff",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Offline prototype verification only; not the Android implementation",
+  "scripts": { "test": "node tests/prototype.test.cjs" },
+  "devDependencies": { "playwright": "1.65.0" }
+}

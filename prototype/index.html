@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>忘了没 · 产品交互原型</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="review-header"><a class="wordmark" href="#">忘了没<span class="mark">✓</span></a><span class="edition">ANDROID / DESIGN HANDOFF · V1.0</span><button class="review-button" id="theme-toggle">切换深色</button></header>
+  <main class="review-layout">
+    <aside class="brief">
+      <span class="eyebrow">小米桌面 · 随手记录</span>
+      <h1>想到，<br>就记下。</h1>
+      <p class="intro">要做的事，要买的东西。<br>留在桌面，也留在心上。</p>
+      <nav class="review-nav" aria-label="原型场景"><button data-scene="desktop" class="selected"><span>01</span> 桌面小部件 <b>↗</b></button><button data-scene="app"><span>02</span> 配套 App <b>↗</b></button><button data-scene="config"><span>03</span> 小部件配置 <b>↗</b></button></nav>
+      <div class="context"><span class="eyebrow">当前交互</span><h2 id="context-title">桌面上，完成一件小事</h2><p id="context-copy">点圆圈直接完成，点正文修改。点“记一条”打开输入面板，保存后回到桌面。</p><div class="flow"><span>桌面</span><i>→</i><span>输入</span><i>→</i><span>保存返回</span></div></div>
+      <p class="prototype-note">浏览器交互模拟 · 不是 APK。实际键盘、桌面刷新和系统进程行为需 Android 真机验证。</p>
+    </aside>
+    <section class="stage" aria-label="手机交互预览">
+      <div class="phone" id="phone"><div class="statusbar"><span>09:41</span><span class="camera"></span><span aria-label="信号与电量">▰ ▰  88%</span></div><div id="screen"></div><div id="overlay"></div><div id="toast" role="status" aria-live="polite"></div><div class="gesture"></div></div>
+      <div class="stage-caption"><span class="live-dot"></span><span id="stage-label">桌面预览 / 两个独立实例</span></div>
+    </section>
+    <aside class="details"><span class="eyebrow">交互说明</span><div class="detail-item"><span class="number">↗</span><h3>一点就能记</h3><p>输入发生在独立编辑页。继承清单，自动聚焦，保存即返回。</p></div><div class="detail-item"><span class="number">✓</span><h3>桌面直接划掉</h3><p>勾选后补入下一条。当前小部件保留最近一次完成的撤销入口。</p></div><div class="detail-item"><span class="number">⌘</span><h3>同一份记录</h3><p>两个小部件和 App 共用数据；修改后立即同步演示视图。</p></div><hr><span class="eyebrow">评审工具 · 不进入 App</span><div class="demo-tools"><button id="size-toggle" class="review-button">主小部件：标准</button><button id="reset-demo" class="review-button">恢复演示数据</button></div><p class="prototype-note" id="storage-status">数据仅保存在当前浏览器。</p></aside>
+  </main>
+  <footer class="review-footer"><span>LOCAL FIRST. LESS TO REMEMBER.</span><span>产品 / 架构 / 验收基线 · 2026.11</span></footer>
+  <input type="file" id="import-file" accept=".json,application/json" hidden>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-06",
+  "device": {
+    "serial": "emulator-5558",
+    "androidApi": 34,
+    "model": "sdk_gphone64_x86_64"
+  },
+  "jvm": {
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "jvmCases": [
+    "rejectsBlankAndMultilineTitle",
+    "trimsTitleAndNormalizesDecimalExactly",
+    "unitRequiresQuantity",
+    "rejectsInvalidQuantities",
+    "emojiLimitUsesCodePoints",
+    "todoClearsShoppingMetadata"
+  ],
+  "instrumentation": {
+    "tests": 10,
+    "passed": 10,
+    "failed": 0,
+    "evidence": "android-instrumentation.txt"
+  },
+  "limitations": [
+    "No Xiaomi or HyperOS 3 device test",
+    "System AppWidgetHost tested, not Xiaomi launcher or App Vault"
+  ]
+}
