@@ -29,6 +29,10 @@
 
 截图：[暖调玻璃 Widget](android-widget-translucent-c.png)、[C 方案设计稿](widget-design-c.png)、[可更新界面](android-update-available.png)。
 
+### 负一屏实测反馈（2026-11-06）
+
+用户反馈：目标澎湃 OS 3 的负一屏只能添加小米小部件，标准 Android 原生小部件找不到；原生小部件只能在普通桌面添加。由此确认当前标准 Widget 版本**不支持负一屏**，不能将普通桌面 `AppWidgetHost` 测试或普通桌面添加行为视为负一屏通过。若负一屏是硬性目标，需另立小米小部件阶段（`miuiWidget`、独立 `:widgetProvider`、曝光刷新、能力判断、审核/商务 token），并需明确设备与系统版本。
+
 ---
 
 ## 历史：0.2.1-mvp / 2026-11-06
