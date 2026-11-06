@@ -71,7 +71,7 @@
 
 补充：SAF 导出文件 1678 bytes；导入预览显示 2 个清单、3 条记录，新增 0 个清单、3 条记录，跳过 2 项。系统 light/dark 与 200% 字体截图见 [开发记录](development-log.md)。
 
-新增（用户授权范围）：设置页 GitHub Releases 检查更新。0.2.1 起 GitHub API 失败会回退到 jsDelivr 静态清单，并提供 GitHub/国内加速下载入口和 SHA256。前期设备手动验证发布前 404 文案、发布后“已是最新版本：v0.2.0”和打开发布页进入 Chrome；`UpdateCheckerTest` 13 项覆盖回退逻辑。该功能需要 INTERNET，仅手动触发，不自动下载/安装。
+新增（用户授权范围）：设置页 GitHub Releases 检查更新。0.2.1 起 GitHub API 失败会回退到 jsDelivr 静态清单，并提供 GitHub/国内加速下载入口和 SHA256。设备验证：旧 0.2.0 检查到 v0.2.1；新 UI 显示两个下载入口和 SHA256，国内加速入口打开 Chrome；jsDelivr 清单/APK 哈希与 Release 一致；最终 0.2.1 显示已是最新。`UpdateCheckerTest` 13 项覆盖回退逻辑。该功能需要 INTERNET，仅手动触发，不自动下载/安装。
 
 ## 性能目标（真机目标，不是已测结果）
 

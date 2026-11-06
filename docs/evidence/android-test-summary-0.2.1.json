@@ -47,6 +47,10 @@
     "behavior": "GitHub API first; jsDelivr manifest fallback; browser download only; SHA256 shown"
   },
   "manualChecks": [
+    "jsDelivr manifest and APK return HTTP 200 with matching SHA256",
+    "v0.2.0 app detects v0.2.1 and shows GitHub download",
+    "new update UI shows GitHub/accelerated downloads and SHA256; accelerated link opens Chrome",
+    "0.2.1 app reports latest after release",
     "SAF export and import after pm clear",
     "force-stop and reboot data recovery",
     "light/dark and 200% font",

@@ -33,7 +33,14 @@
 - 国内加速 APK：<https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.2.1/releases/wanglemai-0.2.1-debug.apk>
 - 静态清单：<https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@main/update/latest.json>
 
-发布后还需在旧 0.2.0 安装上实测“发现新版本 v0.2.1”和两个下载入口；此条在完成后补记。
+发布后验证：
+
+- 旧 `0.2.0` APK（已发布版本）安装后检查更新，显示“发现新版本：v0.2.1”和 GitHub 下载入口。
+- 用同代码、临时标记为 0.2.0 的未发布测试 APK 验证新 UI：显示“GitHub 下载”“国内加速下载”“打开发布页”和 SHA256；点国内加速下载成功进入 Chrome。
+- jsDelivr 静态清单与 APK 均返回 HTTP 200；APK 哈希与 GitHub Release 资产一致。
+- 最终安装 `wanglemai-0.2.1-debug.apk`，检查更新显示“已是最新版本：v0.2.1”。
+
+[可更新界面截图](android-update-available.png)
 
 ---
 
