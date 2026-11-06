@@ -40,6 +40,12 @@
     "signature": "APK Signature Scheme v2 verified",
     "permissions": ["android.permission.INTERNET", "com.wanglemai.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"]
   },
+  "release": {
+    "repo": "https://github.com/wacilimonster-source/wanglemai",
+    "tag": "v0.2.0",
+    "url": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.2.0",
+    "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.0/wanglemai-0.2.0-debug.apk"
+  },
   "manualChecks": [
     "SAF export through DocumentsUI to /sdcard/Download",
     "pm clear then SAF import preview and merge restored 3 records",
@@ -47,7 +53,7 @@
     "emulator reboot then launch retained records",
     "system night mode light/dark screenshots",
     "font scale 200% app and widget core controls",
-    "GitHub update check returns a clear no-release result before publishing"
+    "GitHub update check returns no-release result before publishing and latest v0.2.0 after release; release page opens Chrome"
   ],
   "notVerified": [
     "Xiaomi HyperOS 3 physical device",

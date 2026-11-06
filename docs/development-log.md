@@ -63,7 +63,7 @@ adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.t
 - **字体缩放**：`font_scale 2.0` 下 App 编辑页保存按钮可见、可点击；Widget 至少保留标题、1 行记录、“＋记一条”和页脚入口；验证后恢复 1.0。
 - **输入法**：编辑器自动聚焦并显示键盘，保存按钮在键盘上方；UI 测试在键盘存在时点击保存成功；Back 第一次收键盘、第二次保留草稿退出。
 - **APK 原位升级**：本次开发中多次 `install -r` 覆盖安装，Room 数据与偏好保留；不是正式版本间升级矩阵测试。
-- **检查更新**：Release 创建前手动验证 404 文案“仓库还没有发布版本”；创建 GitHub Release 后再验证“已是最新版本”与下载/发布页。
+- **检查更新**：Release 创建前手动验证 404 文案“仓库还没有发布版本”；发布 `v0.2.0` 后安装 Release APK，设置 → 检查更新返回“已是最新版本：v0.2.0”，点“打开发布页”成功进入 Chrome。
 - **多实例/双尺寸**：真实系统 `AppWidgetHost` 中两个标准实例同数据刷新；标准+大号实例可绑定不同清单/主题/密度，一个实例完成只在该实例出现撤销；大号显示行数多于标准；配置页保存立即刷新，取消不产生 config。
 
 截图：
@@ -82,6 +82,13 @@ adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.t
 - 数据库存储写满/IO 故障注入、真实断电草稿边界。
 - 真实系统 Launcher 的小部件在重启/APK 升级/进程回收后的实例恢复。
 - 重复 SAF 导入的手机端第二次完整点击流程（逻辑与 Room 测试已覆盖）。
+
+### GitHub 发布
+
+- 源码：<https://github.com/wacilimonster-source/wanglemai>
+- Release：<https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.2.0>
+- APK 资产：`wanglemai-0.2.0-debug.apk`，Release 上下载哈希与本地一致：`e10616e56212ae80b356936f3881f2bd487ab20362218b0b51055e596527db90`。
+- 检查更新读取 `api.github.com/repos/wacilimonster-source/wanglemai/releases/latest`，无 token，不自动安装。
 
 ### 已知限制与下一步
 
