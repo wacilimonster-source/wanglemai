@@ -52,7 +52,9 @@
     "font scale 200% widget controls",
     "two widget sizes and independent instances",
     "SAF export/import, force-stop/reboot, themes",
-    "GitHub/jsDelivr update check"
+    "GitHub/jsDelivr update check",
+    "v0.2.1 app detects v0.2.2, shows both downloads and SHA256; accelerated link opens Chrome",
+    "jsDelivr main manifest refreshed by purge and reports v0.2.2"
   ],
   "notVerified": [
     "Xiaomi HyperOS 3 physical device and App Vault",

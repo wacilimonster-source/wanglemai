@@ -21,7 +21,13 @@
 - APK：<https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.2/wanglemai-0.2.2-debug.apk>
 - 国内加速 APK：<https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.2.2/releases/wanglemai-0.2.2-debug.apk>
 
-截图：[暖调玻璃 Widget](android-widget-translucent-c.png)、[C 方案设计稿](widget-design-c.png)。
+发布后验证：
+
+- 旧 `0.2.1` 安装检查更新，实际显示“发现新版本：v0.2.2”，同时出现 GitHub 下载、国内加速下载、发布页和 SHA256；国内加速入口成功进入 Chrome。
+- jsDelivr `@main/update/latest.json` 分支缓存需要发布后主动 purge；执行 `scripts/purge-jsdelivr-manifest.sh` 后清单从 v0.2.1 更新为 v0.2.2。
+- 最终安装 0.2.2 APK；版本 versionCode 4。
+
+截图：[暖调玻璃 Widget](android-widget-translucent-c.png)、[C 方案设计稿](widget-design-c.png)、[可更新界面](android-update-available.png)。
 
 ---
 

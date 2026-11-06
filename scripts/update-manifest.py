@@ -57,6 +57,7 @@ def main() -> None:
     args.output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
                            encoding="utf-8")
     print(f"wrote {args.output} for {tag} ({name}, {manifest['sha256']})")
+    print("after pushing main run: bash scripts/purge-jsdelivr-manifest.sh")
 
 
 if __name__ == "__main__":

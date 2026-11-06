@@ -45,7 +45,8 @@ adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.t
 2. 构建并复制 APK 到 `releases/`。
 3. 生成国内回退清单：`python scripts/update-manifest.py vX.Y.Z releases/wanglemai-X.Y.Z-debug.apk --release-name "忘了没 vX.Y.Z MVP"`。
 4. 提交、打 tag、推送，并在 GitHub 创建 Release，上传 APK 资产。
-5. jsDelivr 静态清单使用 `@main`，可能有缓存延迟；APK 加速链接使用 tag，避免内容漂移。
+5. 推送后清理 jsDelivr 分支缓存：`bash scripts/purge-jsdelivr-manifest.sh`；否则国内回退清单可能延迟更新。
+6. jsDelivr 静态清单使用 `@main`；APK 加速链接使用 tag，避免内容漂移。
 
 ## 安装与添加小部件
 
