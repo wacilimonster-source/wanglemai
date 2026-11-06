@@ -37,7 +37,8 @@
 环境：`emulator-5558`，Android 14/API34，sdk_gphone64_x86_64，1080x1920（420dpi）。未使用小米真机。
 
 - 0.2.0 基线：JVM 33/33、设备 29/29（[设备测试](evidence/android-instrumentation-0.2.0.txt)）。
-- 0.2.1 更新检查回退：JVM 38/38、设备 29/29（[设备测试](evidence/android-instrumentation-0.2.1.txt)）；新增 `UpdateCheckerTest` 13 项覆盖 GitHub JSON、jsDelivr 清单、加速 URL、哈希、GitHub 失败回退与双源失败。
+- 0.2.1 更新检查回退：JVM 38/38、设备 29/29（[设备测试](evidence/android-instrumentation-0.2.1.txt)）；`UpdateCheckerTest` 13 项覆盖 GitHub JSON、jsDelivr 清单、加速 URL、哈希、GitHub 失败回退与双源失败。
+- 0.2.2 暖调玻璃 Widget：JVM 38/38、设备 29/29（[设备测试](evidence/android-instrumentation-0.2.2.txt)）；浅色 #C2F9F6E9、深色 #CC112219，1dp 描边，24dp 圆角；真机/宿主截图见 [开发记录](development-log.md)。
 
 | ID | 结果 | 证据 / 说明 |
 |---|---|---|

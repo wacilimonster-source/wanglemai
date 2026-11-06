@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "version": "v0.2.1",
-  "releaseName": "忘了没 v0.2.1 MVP",
-  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.2.1",
-  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.1/wanglemai-0.2.1-debug.apk",
-  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.2.1/releases/wanglemai-0.2.1-debug.apk",
-  "sha256": "76a2b6a971cf945ad71774e178af301978685e5ffd2c2a859543624f5a7edc1a",
-  "publishedAt": "2026-11-06T07:59:53Z"
+  "version": "v0.2.2",
+  "releaseName": "忘了没 v0.2.2 MVP",
+  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.2.2",
+  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.2/wanglemai-0.2.2-debug.apk",
+  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.2.2/releases/wanglemai-0.2.2-debug.apk",
+  "sha256": "9aa9d892a252c7e83c5d6e6d475663b68ec0f0fb8b065c4ff5a3fb8c59e416fa",
+  "publishedAt": "2026-11-06T08:38:16Z"
 }

@@ -5,6 +5,7 @@ import android.appwidget.*
 import android.content.ComponentName
 import android.os.Bundle
 import android.widget.LinearLayout
+import com.wanglemai.app.R
 import com.wanglemai.app.widget.ListLargeProvider
 import com.wanglemai.app.widget.ListSmallProvider
 
@@ -21,6 +22,7 @@ class WidgetHarnessActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 64, 16, 16)
+            setBackgroundResource(R.drawable.harness_wallpaper)
         }
         setContentView(root)
         val includeLarge = intent.getBooleanExtra("include_large", false)

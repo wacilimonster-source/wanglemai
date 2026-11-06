@@ -457,6 +457,7 @@ class FrameworkUiTest {
             awaitCondition { device.findObjects(By.text("• $shoppingTitle")).isNotEmpty() }
             assertNotNull(device.findObject(By.text(customName)))
             awaitCondition { device.findObjects(By.text(todoTitles[3])).isNotEmpty() }
+            device.takeScreenshot(java.io.File(context.getExternalFilesDir(null), "widget-translucent.png"))
 
             val shoppingDescription = "标记『$shoppingTitle』为已购买"
             assertNotNull(device.findObject(By.desc(shoppingDescription)))

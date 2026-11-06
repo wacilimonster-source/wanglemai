@@ -1,6 +1,31 @@
 # Android 开发与交接记录
 
-## 当前交付：0.2.1-mvp / 2026-11-06
+## 当前交付：0.2.2-mvp / 2026-11-06
+
+小部件底色从实色改为 C · 暖调半透明玻璃。
+
+### 设计选择
+
+- 浅色：奶油白 `rgba(249,246,233,0.76)`，1dp 白色高光描边 `rgba(255,255,255,0.72)`。
+- 深色：墨绿 `rgba(17,34,25,0.80)`，1dp 浅绿描边 `rgba(165,215,185,0.30)`。
+- 24dp 圆角；文字仍使用实色，保证壁纸任意变化时的对比。
+- Android RemoteViews 不支持实时背景模糊，实际实现是半透明色面 + 描边，不使用虚假模糊。
+
+### 变更与结果
+
+- 更新 `widget_background_light.xml` / `widget_background_dark.xml`；debug WidgetHost 增加渐变测试壁纸并截图。
+- 版本升为 versionCode 4 / versionName 0.2.2-mvp。
+- JVM 38/38、设备 29/29、Lint 0 error。
+- APK SHA256：`9aa9d892a252c7e83c5d6e6d475663b68ec0f0fb8b065c4ff5a3fb8c59e416fa`
+- Release：<https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.2.2>
+- APK：<https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.2/wanglemai-0.2.2-debug.apk>
+- 国内加速 APK：<https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.2.2/releases/wanglemai-0.2.2-debug.apk>
+
+截图：[暖调玻璃 Widget](android-widget-translucent-c.png)、[C 方案设计稿](widget-design-c.png)。
+
+---
+
+## 历史：0.2.1-mvp / 2026-11-06
 
 在 0.2.0 基础上增加更新检查的国内可达性兜底，版本升为 versionCode 3 / versionName 0.2.1-mvp。
 

@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#FFFFFF" />
+    <!-- Warm cream glass: 76% opacity over the host wallpaper. -->
+    <solid android:color="#C2F9F6E9" />
+    <stroke android:width="1dp" android:color="#B8FFFFFF" />
     <corners android:radius="24dp" />
 </shape>

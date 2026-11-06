@@ -1,4 +1,4 @@
-# 忘了没 · Android MVP 交付 v0.2.1
+# 忘了没 · Android MVP 交付 v0.2.2
 
 日期：2026-11-06。状态：**原生 MVP 功能已实现并在 Android 14/API34 模拟器完成自动化验证**；澎湃 OS 3 真机、负一屏、API26/31/36、TalkBack 人工验收和性能目标仍未验证。目标系统已确认澎湃 OS 3，手机型号与负一屏支持情况待补。
 
@@ -7,10 +7,10 @@
 - GitHub 仓库：<https://github.com/wacilimonster-source/wanglemai>
 - GitHub Releases（检查更新使用）：<https://github.com/wacilimonster-source/wanglemai/releases>
 - 原生工程：`app/`，Kotlin + Jetpack Compose/Material3 + Room + Coroutines/StateFlow。
-- Debug APK：[wanglemai-0.2.1-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.1/wanglemai-0.2.1-debug.apk)（versionCode 3，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
-- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.2.1 APK SHA256 `76a2b6a971cf945ad71774e178af301978685e5ffd2c2a859543624f5a7edc1a`。
+- Debug APK：[wanglemai-0.2.2-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.2/wanglemai-0.2.2-debug.apk)（versionCode 4，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
+- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.2.2 APK SHA256 `9aa9d892a252c7e83c5d6e6d475663b68ec0f0fb8b065c4ff5a3fb8c59e416fa`。
 - 实测记录：[开发记录](docs/development-log.md)、[验收记录](docs/03-acceptance.md)、[框架状态](docs/07-framework-status.md)。
-- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.2.1.txt)、[设备测试](docs/evidence/android-instrumentation-0.2.1.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.2.1.json)。
+- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.2.2.txt)、[设备测试](docs/evidence/android-instrumentation-0.2.2.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.2.2.json)。
 
 ## 已实现的产品能力
 
@@ -19,7 +19,7 @@
 - 最多 50 条原子批量录入，按 CRLF/LF 拆分、忽略空行、错误指出原始行号、同 commandId 重试不重复写入。
 - 字面搜索（忽略英文大小写，`%`/`_` 不作通配符）、按清单/状态过滤、清单与类型切换记忆。
 - Room 长期草稿：300ms debounce、onStop 补写、草稿恢复/丢弃、编辑冲突不静默覆盖、保存成功才清除。
-- 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与密度；多实例独立、主动刷新、小部件内完成与撤销、冲突页脚、空态/错误态。
+- 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与密度；暖调半透明玻璃底色（浅色奶油 76% / 深色墨绿 80%，1dp 描边，24dp 圆角）；多实例独立、主动刷新、小部件内完成与撤销、冲突页脚、空态/错误态。
 - Widget 的新增/正文/标题点击直接通过 `PendingIntent.getActivity` 进入 `QuickEntryActivity`，没有 Receiver/Service 间接启动编辑页。
 - SAF JSON 导出与导入：5MB 上限、严格 schema 校验、预览数量、事务合并、同 ID 保留本机、名称冲突加“（导入N）”、失败不部分写库。
 - 浅/深色主题；应用主题可跟随系统或显式切换。
@@ -85,3 +85,4 @@ adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.t
 - 数据库写满/存储失败未做故障注入；输入保留与重试由实现保证但未专门测试。
 - 草稿 onStop 写盘不能保证突然断电前最后 300ms 的输入。
 - jsDelivr 国内 CDN 的可用性不保证；失败时仍可使用 GitHub 下载，公开分发的 debug 签名不应作为安全更新身份。
+- RemoteViews 不支持实时背景模糊；小部件采用半透明色面 + 1dp 描边模拟玻璃效果。

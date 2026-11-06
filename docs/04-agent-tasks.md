@@ -2,7 +2,7 @@
 
 本文件可供一个 Agent 串行执行，也可由用户安排多个 Agent 分工。当前没有启动或分派开发 Agent。
 
-实施更新：当前已交付原生 v0.2.1 MVP。T0-T5 主体已实现并在 Android14/API34 模拟器通过 38 项 JVM + 29 项设备测试；T6 的小米真机、负一屏、API26/31/36、TalkBack 人工验收、性能与真实 Launcher 生命周期仍未完成。先读 [现状](07-framework-status.md) 和 [实测记录](development-log.md)，继续未验收项，不要重复已完成功能或覆盖现有工程。
+实施更新：当前已交付原生 v0.2.2 MVP。T0-T5 主体已实现并在 Android14/API34 模拟器通过 38 项 JVM + 29 项设备测试；T6 的小米真机、负一屏、API26/31/36、TalkBack 人工验收、性能与真实 Launcher 生命周期仍未完成。先读 [现状](07-framework-status.md) 和 [实测记录](development-log.md)，继续未验收项，不要重复已完成功能或覆盖现有工程。
 
 ## 依赖顺序
 
