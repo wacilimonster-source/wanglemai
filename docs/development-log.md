@@ -72,6 +72,7 @@ adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.t
 - [深色主界面](android-main-dark.png)
 - [浅色 Widget](android-widget-light.png)
 - [深色 Widget（200% 字体）](android-widget-dark-200pct.png)
+- [检查更新结果](android-update-check.png)
 
 ### 未执行 / 未通过
 
