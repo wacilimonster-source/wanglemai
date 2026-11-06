@@ -1,4 +1,4 @@
-> 状态说明（2026-11-06）：v0.2.2 MVP 已实现，本文件保留为最初启动指令。继续开发前以 [框架状态](07-framework-status.md)、[开发记录](development-log.md) 和 [验收记录](03-acceptance.md) 为准；不要重复已完成的 MVP 功能。下一阶段是 T6：小米真机普通桌面/负一屏、API 矩阵、TalkBack、性能与真实 Launcher 生命周期验证；更新检查已支持 GitHub 主源与 jsDelivr 国内回退。
+> 状态说明（2026-11-06）：v0.2.2 MVP 已实现，本文件保留为最初启动指令。继续开发前以 [框架状态](07-framework-status.md)、[开发记录](development-log.md) 和 [验收记录](03-acceptance.md) 为准；不要重复已完成的 MVP 功能。下一阶段是 T6：小米真机普通桌面、API 矩阵、TalkBack、性能与真实 Launcher 生命周期验证；负一屏已因小米小部件要求应用商店上架而评估为不开发；更新检查已支持 GitHub 主源与 jsDelivr 国内回退。
 
 # 可直接交给其他模型的开发启动指令
 
