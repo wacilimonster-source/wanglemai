@@ -84,21 +84,37 @@ class FrameworkUiTest {
 
     @Test fun appCanCreateEditAndPersistRecord() = runBlocking {
         resetSelection()
-        val title = "基础框架验证${System.currentTimeMillis()}"
-        val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java))
+        val stamp = System.currentTimeMillis()
+        val title = "基础框架验证$stamp"
+        val listName = "独立验证$stamp"
+        val listId = (container.repository.createList(ListKind.TODO, listName)
+            as MutationResult.Success).itemIds.single()
+        val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java)
+            .putExtra("list_id", listId))
         try {
+            assertNotNull(device.wait(Until.findObject(By.textContains(listName)), 10_000))
             tap("＋ 记一条")
             find("想到，就记一条。")
             focusedEditor().text = title
-            device.wait(Until.findObject(By.text(title)), 10_000)
-            tap("保存"); tap(title); find("编辑这一条")
+            tap("保存")
+            awaitEditorClosed()
+            val record = device.wait(Until.findObject(By.descStartsWith(title)), 10_000)
+                ?: error("Cannot find saved record")
+            record.click()
+            find("编辑这一条")
             focusedEditor().text = "$title 已修改"
-            tap("保存修改"); find("$title 已修改")
+            tap("保存修改")
+            find("$title 已修改")
             device.takeScreenshot(java.io.File(context.getExternalFilesDir(null), "framework-main.png"))
-            val item = container.repository.observeItems(DEFAULT_TODO, false, title).first().single()
+            val item = container.repository.observeItems(listId, false, title).first().single()
             assertEquals("$title 已修改", container.repository.getItem(item.id)!!.title)
-            container.mutate { container.repository.delete(item.id, item.version) }
-        } finally { scenario.close() }
+        } finally {
+            scenario.close()
+            deleteAllItems(listId)
+            container.repository.list(listId)?.let {
+                container.repository.deleteListAndMoveToDefault(it.id, it.version)
+            }
+        }
         Unit
     }
 
@@ -374,6 +390,16 @@ class FrameworkUiTest {
             val search = device.wait(Until.findObject(By.clazz("android.widget.EditText").enabled(true)), 10_000)
                 ?: error("Cannot find search field")
             search.text = "%_"
+            awaitCondition {
+                var filtered = false
+                scenario.onActivity {
+                    val model = androidx.lifecycle.ViewModelProvider(it)[com.wanglemai.app.ui.main.MainViewModel::class.java]
+                    filtered = model.items.value.singleOrNull()?.id == specialId
+                }
+                filtered
+            }
+            device.waitForIdle()
+            if (android.os.Build.VERSION.SDK_INT >= 33) instrumentation.uiAutomation.clearCache()
             find(special)
             awaitCondition { device.findObjects(By.text(ordinary)).isEmpty() }
             tap("待买")
@@ -454,7 +480,7 @@ class FrameworkUiTest {
             container.widgets.refresh(smallId)
             container.widgets.refresh(largeId)
 
-            awaitCondition { device.findObjects(By.text("• $shoppingTitle")).isNotEmpty() }
+            awaitCondition { device.findObjects(By.text(shoppingTitle)).isNotEmpty() }
             assertNotNull(device.findObject(By.text(customName)))
             awaitCondition { device.findObjects(By.text(todoTitles[3])).isNotEmpty() }
             device.takeScreenshot(java.io.File(context.getExternalFilesDir(null), "widget-translucent.png"))
@@ -473,7 +499,9 @@ class FrameworkUiTest {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             find("这张卡片，记什么？")
             tap(customName)
+            UiScrollable(UiSelector().scrollable(true)).scrollIntoView(UiSelector().text("浅色"))
             tap("浅色")
+            UiScrollable(UiSelector().scrollable(true)).scrollIntoView(UiSelector().text("舒适"))
             tap("舒适")
             tap("保存并添加")
             awaitRepo {
@@ -577,7 +605,8 @@ class FrameworkUiTest {
             tap("已完成 · 撤销")
             awaitCondition { runBlocking { !container.repository.getItem(itemId)!!.completed } }
             awaitCondition { device.findObjects(By.text(title)).size == 2 }
-            tap("＋ 记一条"); find("想到，就记一条。")
+            device.wait(Until.findObject(By.desc("新增一条${listName}记录")), 10_000).click()
+            find("想到，就记一条。")
             focusedEditor().text = "$title 快速新增"
             tap("保存")
             awaitCondition { device.findObjects(By.text("$title 快速新增")).size == 2 }

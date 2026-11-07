@@ -1,0 +1,58 @@
+{
+  "scope": "Browser design proposal only; not Android or Launcher validation",
+  "checks": [
+    {
+      "height": 170,
+      "density": "comfortable",
+      "count": 1
+    },
+    {
+      "height": 170,
+      "density": "compact",
+      "count": 2
+    },
+    {
+      "height": 180,
+      "density": "comfortable",
+      "count": 2
+    },
+    {
+      "height": 180,
+      "density": "compact",
+      "count": 2
+    },
+    {
+      "height": 220,
+      "density": "comfortable",
+      "count": 2
+    },
+    {
+      "height": 220,
+      "density": "compact",
+      "count": 3
+    },
+    {
+      "height": 320,
+      "density": "comfortable",
+      "count": 3
+    },
+    {
+      "height": 320,
+      "density": "compact",
+      "count": 5
+    },
+    {
+      "height": 380,
+      "density": "comfortable",
+      "count": 5
+    },
+    {
+      "height": 380,
+      "density": "compact",
+      "count": 6
+    }
+  ],
+  "narrowOverflow": false,
+  "completionUndo": true,
+  "pageErrors": []
+}

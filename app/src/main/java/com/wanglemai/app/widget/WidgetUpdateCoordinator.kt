@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
+import android.os.Build
 import androidx.room.withTransaction
 import com.wanglemai.app.R
 import com.wanglemai.app.data.RoomItemRepository
@@ -17,7 +18,6 @@ import com.wanglemai.app.ui.editor.QuickEntryActivity
 import com.wanglemai.app.ui.main.MainActivity
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.math.floor
 
 class WidgetUpdateCoordinator(
     private val context: Context,
@@ -95,20 +95,8 @@ class WidgetUpdateCoordinator(
         val large = info.provider.className == ListLargeProvider::class.java.name
         val compact = widgetDensityOf(config?.density) == WidgetDensity.COMPACT
         val dark = isDark(themeModeOf(config?.theme))
-        val options = manager.getAppWidgetOptions(widgetId)
-        val rawHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
-        val heightDp = if (rawHeight > 0) rawHeight else if (large) 320 else 180
-        val fontScale = context.resources.configuration.fontScale.coerceAtLeast(1f)
-        val rowHeight = (if (compact) 48 else 52) * fontScale
-        val maxRows = if (large) 7 else 3
-        // 0 rows is allowed at extreme min sizes: the widget then keeps title + footer only
-        // instead of forcing a clipped row (development.md §布局与缩放). One row survives while
-        // at least three quarters of its height fits, matching Launcher min-height slack.
-        val rowSpace = (heightDp - 120).coerceAtLeast(1)
-        val limit = floor(rowSpace / rowHeight).toInt()
-            .let { if (it == 0 && rowSpace >= rowHeight * 3 / 4) 1 else it }
-            .coerceIn(0, maxRows)
-        val rows = dao.widgetItems(list.id, limit)
+        val sizes = WidgetSizes.forWidget(context, widgetId, large)
+        val rows = dao.widgetItems(list.id, 12)
         val total = dao.count(list.id)
         val undoEntity = if (config != null) dao.undo(widgetId) else null
         val undo = undoEntity?.token()
@@ -127,16 +115,21 @@ class WidgetUpdateCoordinator(
                 action(widgetId, "undo", commandId = stored.commandId)
             }
         )
-        manager.updateAppWidget(widgetId, renderer.render(
-            list = TaskList(list.id, list.name, ListKind.valueOf(list.kind), list.isDefault),
-            rows = rows.map { it.model() },
-            totalActive = total,
-            undo = undo,
-            footerMessage = transientMessages[widgetId],
-            dark = dark,
-            compact = compact,
-            intents = intents
-        ))
+        val layouts = sizes.associateWith { size ->
+            renderer.render(
+                list = TaskList(list.id, list.name, ListKind.valueOf(list.kind), list.isDefault),
+                rows = rows.map { it.model() },
+                totalActive = total,
+                undo = undo,
+                footerMessage = transientMessages[widgetId],
+                dark = dark,
+                layout = WidgetLayout.resolve(context, size, compact),
+                intents = intents
+            )
+        }
+        val views = if (Build.VERSION.SDK_INT >= 31 && layouts.size > 1)
+            android.widget.RemoteViews(layouts) else layouts.values.first()
+        manager.updateAppWidget(widgetId, views)
     }
 
     private suspend fun renderErrorLocked(widgetId: Int) {
@@ -146,11 +139,19 @@ class WidgetUpdateCoordinator(
         val config = dao.config(widgetId)
         val listId = config?.listId ?: DEFAULT_TODO
         val add = activity(widgetId, "create", QuickEntryActivity.createIntent(context, listId, widgetId))
-        manager.updateAppWidget(widgetId, renderer.error(
-            dark = isDark(themeModeOf(config?.theme)),
-            add = add,
-            retry = action(widgetId, "refresh")
-        ))
+        val large = info.provider.className == ListLargeProvider::class.java.name
+        val compact = widgetDensityOf(config?.density) == WidgetDensity.COMPACT
+        val layouts = WidgetSizes.forWidget(context, widgetId, large).associateWith { size ->
+            renderer.error(
+                dark = isDark(themeModeOf(config?.theme)),
+                layout = WidgetLayout.resolve(context, size, compact),
+                add = add,
+                retry = action(widgetId, "refresh")
+            )
+        }
+        val views = if (Build.VERSION.SDK_INT >= 31 && layouts.size > 1)
+            android.widget.RemoteViews(layouts) else layouts.values.first()
+        manager.updateAppWidget(widgetId, views)
     }
 
     private fun isDark(mode: ThemeMode): Boolean = when (mode) {

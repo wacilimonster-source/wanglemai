@@ -4,10 +4,14 @@ import android.app.Activity
 import android.appwidget.*
 import android.content.ComponentName
 import android.os.Bundle
+import android.os.Build
+import android.util.SizeF
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import com.wanglemai.app.R
 import com.wanglemai.app.widget.ListLargeProvider
 import com.wanglemai.app.widget.ListSmallProvider
+import kotlin.math.roundToInt
 
 /** Debug-only system AppWidgetHost for instrumentation; never a product entry point. */
 class WidgetHarnessActivity : Activity() {
@@ -58,6 +62,28 @@ class WidgetHarnessActivity : Activity() {
 
     override fun onStart() { super.onStart(); host.startListening() }
     override fun onStop() { host.stopListening(); super.onStop() }
+
+    fun resizeWidget(widgetId: Int, widthDp: Int, heightDp: Int) {
+        val root = findViewById<ViewGroup>(android.R.id.content).getChildAt(0) as ViewGroup
+        val widget = (0 until root.childCount).map { root.getChildAt(it) }
+            .filterIsInstance<AppWidgetHostView>().first { it.appWidgetId == widgetId }
+        val density = resources.displayMetrics.density
+        widget.layoutParams = LinearLayout.LayoutParams(
+            (widthDp * density).roundToInt() + widget.paddingLeft + widget.paddingRight,
+            (heightDp * density).roundToInt() + widget.paddingTop + widget.paddingBottom)
+        val manager = AppWidgetManager.getInstance(this)
+        manager.updateAppWidgetOptions(widgetId, Bundle().apply {
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, widthDp)
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, widthDp)
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, heightDp)
+            putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, heightDp)
+            if (Build.VERSION.SDK_INT >= 31) {
+                putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES,
+                    arrayListOf(SizeF(widthDp.toFloat(), heightDp.toFloat()), SizeF(500f, 144f)))
+            }
+        })
+    }
+
     override fun onDestroy() {
         // Keep bindings when the system reclaims this Activity behind a configuration
         // screen; deleting the host would also delete the widgets under test.

@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Warm beige glass: 92% opacity over the host wallpaper, 1dp top highlight + 1dp light stroke. -->
+<!-- Initial layout fallback. Rendered glass edges are shared with the configuration preview. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
             <solid android:color="#EBFFF8EA" />
-            <corners android:radius="24dp" />
+            <corners android:radius="@dimen/widget_corner_radius" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <gradient android:angle="270" android:startColor="#40FFFFFF" android:endColor="#00FFFFFF" />
-            <corners android:radius="24dp" />
+            <gradient android:angle="270" android:startColor="#14FFFFFF" android:endColor="#00FFFFFF" />
+            <corners android:radius="@dimen/widget_corner_radius" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <stroke android:width="1dp" android:color="#C2FFFFFF" />
-            <corners android:radius="24dp" />
+            <stroke android:width="1dp" android:color="#5CFFFFFF" />
+            <corners android:radius="@dimen/widget_corner_radius" />
         </shape>
     </item>
 </layer-list>

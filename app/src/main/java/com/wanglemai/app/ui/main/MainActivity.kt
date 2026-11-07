@@ -84,9 +84,9 @@ class MainActivity : ComponentActivity() {
 
         LaunchedEffect(requested) {
             val id = requested ?: return@LaunchedEffect
-            requestedList.value = null
             screen = MainScreen.LIST
             vm.openList(id)
+            requestedList.compareAndSet(id, null)
         }
         // Downloads finish on the application scope; announce them from the app-wide host so the
         // user learns about completion even when another tab (or the installer) is in front.

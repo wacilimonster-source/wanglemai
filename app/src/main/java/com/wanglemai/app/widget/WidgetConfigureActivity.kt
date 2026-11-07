@@ -3,35 +3,31 @@ package com.wanglemai.app.widget
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
+import android.view.View
+import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.room.withTransaction
-import com.wanglemai.app.R
 import com.wanglemai.app.app
 import com.wanglemai.app.data.db.WidgetConfig
 import com.wanglemai.app.domain.*
@@ -40,6 +36,7 @@ import com.wanglemai.app.ui.theme.rememberAppThemeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 class WidgetConfigureActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -142,9 +139,12 @@ class WidgetConfigureActivity : ComponentActivity() {
                         ThemeMode.DARK -> true
                     }
                     WidgetMaterialPreview(
-                        listName = lists.firstOrNull { it.id == selectedListId }?.name ?: "清单",
+                        list = lists.firstOrNull { it.id == selectedListId }
+                            ?: TaskList("preview", "清单", ListKind.TODO),
                         dark = previewDark,
                         compact = density == WidgetDensity.COMPACT,
+                        widgetId = widgetId,
+                        large = providerClass == ListLargeProvider::class.java.name
                     )
                     Spacer(Modifier.height(20.dp))
                     Text("选择清单", style = MaterialTheme.typography.titleMedium)
@@ -195,7 +195,7 @@ class WidgetConfigureActivity : ComponentActivity() {
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    Text("实际显示行数按桌面分配的空间和系统字体缩放调整，至少保留 1 行。",
+                    Text("显示条数随桌面尺寸和系统字号调整。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     error?.let {
@@ -223,41 +223,66 @@ class WidgetConfigureActivity : ComponentActivity() {
     }
 }
 
-/** Static material preview of the widget glass, tracking the selected theme and density. */
+/** Render the same RemoteViews at the host's size, scaled only to fit the preview stage. */
 @Composable
-private fun WidgetMaterialPreview(listName: String, dark: Boolean, compact: Boolean) {
-    val text = colorResource(if (dark) R.color.widget_dark_text else R.color.widget_light_text)
-    val secondary = colorResource(if (dark) R.color.widget_dark_secondary else R.color.widget_light_secondary)
-    val primary = colorResource(if (dark) R.color.widget_dark_primary else R.color.widget_light_primary)
-    val ring = painterResource(if (dark) R.drawable.widget_check_ring_dark else R.drawable.widget_check_ring_light)
-    val fill = Color(if (dark) 0xF0312920 else 0xEBFFF8EA)
-    val stroke = Color(if (dark) 0x30FFE9C9 else 0xC2FFFFFF)
-    val glass = RoundedCornerShape(24.dp)
-    val rowHeight = if (compact) 48.dp else 52.dp
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(glass)
-            .background(fill)
-            .border(1.dp, stroke, glass)
-            .padding(12.dp)
-    ) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(listName, color = text, fontSize = 16.sp, fontWeight = FontWeight.Medium,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Text("4 项", color = secondary, fontSize = 12.sp)
+private fun WidgetMaterialPreview(
+    list: TaskList,
+    dark: Boolean,
+    compact: Boolean,
+    widgetId: Int,
+    large: Boolean
+) {
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val sizes = WidgetSizes.forWidget(context, widgetId, large)
+    val size = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
+        sizes.maxBy { it.width } else sizes.minBy { it.width }
+    val layout = remember(size, compact, configuration) {
+        WidgetLayout.resolve(context, size, compact)
+    }
+    val samples = remember(list.id, list.kind) {
+        val titles = listOf("给阳台的绿植浇水", "把周末的照片洗出来", "取回干洗的外套",
+            "周五给妈妈打电话", "给猫补一袋猫粮", "整理书桌上的文件",
+            "预约下周的牙齿检查", "把雨伞放进通勤包", "补充厨房纸", "整理周末行程", "寄出明信片", "给耳机充电")
+        titles.mapIndexed { index, title ->
+            Item("preview-$index", list.id, title, "",
+                if (list.kind == ListKind.SHOPPING) "1" else null,
+                if (list.kind == ListKind.SHOPPING) "件" else null,
+                false, index == 0, index.toLong(), 0, 0, null, 1)
         }
-        listOf("给阳台的绿植浇水", "把周末的照片洗出来").forEach { sample ->
-            Row(Modifier.fillMaxWidth().heightIn(min = rowHeight), verticalAlignment = Alignment.CenterVertically) {
-                Icon(ring, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(sample, color = text, fontSize = 14.sp,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+    }
+    val views = remember(list, dark, layout, samples) {
+        WidgetRenderer(context).render(list, samples, samples.size, null, null, dark, layout)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(if (large) "大清单" else "标准清单",
+            style = MaterialTheme.typography.labelMedium)
+        BoxWithConstraints(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer),
+            contentAlignment = Alignment.Center) {
+            val scale = minOf(1f, maxWidth.value / size.width, 220f / size.height)
+            AndroidView(
+                factory = { previewContext ->
+                    FrameLayout(previewContext).apply {
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                    }
+                },
+                modifier = Modifier.width((size.width * scale).dp).height((size.height * scale).dp),
+                update = { frame ->
+                    frame.removeAllViews()
+                    val child = views.apply(context, frame)
+                    child.pivotX = 0f
+                    child.pivotY = 0f
+                    child.scaleX = scale
+                    child.scaleY = scale
+                    val density = context.resources.displayMetrics.density
+                    frame.addView(child, FrameLayout.LayoutParams(
+                        (size.width * density).roundToInt(),
+                        (size.height * density).roundToInt()))
+                }
+            )
         }
-        Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("＋ 记一条", color = primary, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Text("查看全部 ›", color = primary, fontSize = 12.sp)
-        }
+        Text("此尺寸预计显示 ${layout.capacity} 条 · ${size.width.toInt()} × ${size.height.toInt()}dp",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

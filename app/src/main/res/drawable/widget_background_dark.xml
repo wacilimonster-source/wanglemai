@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Deep warm-brown glass: 94% opacity, warm top highlight + soft cream edge. -->
+<!-- Initial layout fallback. Rendered glass edges are shared with the configuration preview. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#F0312920" />
-            <corners android:radius="24dp" />
+            <solid android:color="#E6312920" />
+            <corners android:radius="@dimen/widget_corner_radius" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <gradient android:angle="270" android:startColor="#26FFE9C9" android:endColor="#00FFE9C9" />
-            <corners android:radius="24dp" />
+            <gradient android:angle="270" android:startColor="#0AFFE9C9" android:endColor="#00FFE9C9" />
+            <corners android:radius="@dimen/widget_corner_radius" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <stroke android:width="1dp" android:color="#30FFE9C9" />
-            <corners android:radius="24dp" />
+            <stroke android:width="1dp" android:color="#24FFE9C9" />
+            <corners android:radius="@dimen/widget_corner_radius" />
         </shape>
     </item>
 </layer-list>

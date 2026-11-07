@@ -1,0 +1,66 @@
+{
+  "date": "2026-11-07",
+  "build": "passed",
+  "jvm": {
+    "tests": 58,
+    "failures": 0
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 55
+  },
+  "instrumentation": {
+    "device": "emulator-5554",
+    "api": 34,
+    "widgetTests": 9,
+    "failures": 0,
+    "resizeCleanupRerun": "passed",
+    "fullSuiteTests": 34
+  },
+  "capacity": {
+    "170": [
+      1,
+      2
+    ],
+    "180": [
+      2,
+      2
+    ],
+    "220": [
+      2,
+      3
+    ],
+    "320": [
+      3,
+      5
+    ]
+  },
+  "opacity": {
+    "light": 0.9215686274509803,
+    "dark": 0.9019607843137255
+  },
+  "minimumCalculatedContrast": {
+    "light": {
+      "text": 10.17,
+      "secondary": 4.81,
+      "action": 4.95
+    },
+    "dark": {
+      "text": 8.84,
+      "secondary": 6.05,
+      "action": 5.72
+    }
+  },
+  "apk": "releases/wanglemai-0.3.1-debug.apk",
+  "sha256": "5d158eb917716ae57421cf6b1900a935cff21dde887902518b76704b41a1f35e",
+  "pending": [
+    "HyperOS launcher cell sizing",
+    "real-device wallpaper compositing",
+    "launcher reboot restoration"
+  ],
+  "logs": [
+    "docs/evidence/android-build-0.3.1.txt",
+    "docs/evidence/android-instrumentation-0.3.1.txt"
+  ],
+  "release": "v0.3.1"
+}

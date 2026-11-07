@@ -24,13 +24,11 @@ private data class WidgetPalette(
     val secondary: Int,
     val primary: Int,
     val error: Int,
-    val background: Int,
     val checkIcon: Int
 )
 
-/** Pure RemoteViews rendering; all data is resolved before this class is called. */
+/** The preview and launcher both use these RemoteViews, including their pixel budgets. */
 class WidgetRenderer(private val context: Context) {
-
     fun render(
         list: TaskList,
         rows: List<Item>,
@@ -38,107 +36,135 @@ class WidgetRenderer(private val context: Context) {
         undo: UndoToken?,
         footerMessage: String?,
         dark: Boolean,
-        compact: Boolean,
-        intents: WidgetIntents
+        layout: WidgetLayout,
+        intents: WidgetIntents? = null
     ): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.widget_content)
         val palette = palette(dark)
-        applyTheme(views, palette)
+        val views = content(layout, dark, palette)
         views.setTextViewText(R.id.widget_title, list.name)
-        views.setContentDescription(R.id.widget_title, "打开${list.name}")
-        views.setTextViewText(R.id.widget_count, "$totalActive 项")
-        views.setOnClickPendingIntent(R.id.widget_title, intents.openList)
+        views.setContentDescription(R.id.widget_open, "打开${list.name}，共${totalActive}项")
+        val count = if (totalActive > 99) "99+" else totalActive.toString()
+        views.setTextViewText(R.id.widget_count, "${count}项" + if (layout.full) "" else " ›")
+        bind(views, R.id.widget_open, intents?.openList)
+        bind(views, R.id.widget_add, intents?.add)
+        bind(views, R.id.widget_header_add, intents?.add)
+        val addLabel = "新增一条${list.name}记录"
+        views.setContentDescription(R.id.widget_add, addLabel)
+        views.setContentDescription(R.id.widget_header_add, addLabel)
 
-        val empty = rows.isEmpty()
-        views.setViewVisibility(R.id.widget_empty, if (empty) View.VISIBLE else View.GONE)
-        if (empty) {
-            if (totalActive > 0) {
-                // Too small for even one row: keep title + footer entries, never force a clipped row.
-                views.setTextViewText(R.id.widget_empty, "空间较小 · 打开查看全部")
-                views.setContentDescription(R.id.widget_empty, "空间较小，点此打开${list.name}")
-                views.setOnClickPendingIntent(R.id.widget_empty, intents.openList)
-            } else {
-                views.setTextViewText(R.id.widget_empty,
-                    "还没有${kindLabel(list.kind)}，想到就记下来。")
-            }
-        }
+        val visibleRows = rows.take(layout.capacity)
+        showEmpty(views, layout, visibleRows.isEmpty(),
+            if (totalActive > 0) "空间较小 · 打开查看全部" else "清单空空，想到就记")
+        bind(views, R.id.widget_empty, intents?.openList)
         views.removeAllViews(R.id.widget_rows)
-        rows.forEach { item ->
+        visibleRows.forEach { item ->
             val row = RemoteViews(context.packageName,
-                if (compact) R.layout.widget_row_compact else R.layout.widget_row)
-            row.setTextViewText(R.id.row_title, (if (item.pinned) "• " else "") + item.title)
+                if (layout.compact) R.layout.widget_row_compact else R.layout.widget_row)
+            row.setViewPadding(R.id.row_root, 0, 0, layout.horizontalPadding, 0)
+            row.setInt(R.id.row_title, "setHeight", layout.rowHeight)
+            row.setTextViewText(R.id.row_title, item.title)
             row.setTextColor(R.id.row_title, palette.text)
             row.setImageViewResource(R.id.row_check_icon, palette.checkIcon)
-            row.setTextColor(R.id.row_quantity, palette.secondary)
+            row.setInt(R.id.row_pin, "setColorFilter", palette.secondary)
+            row.setViewVisibility(R.id.row_pin, if (item.pinned) View.VISIBLE else View.GONE)
             val quantity = listOfNotNull(item.quantityDecimal, item.unit).joinToString(" ")
             row.setTextViewText(R.id.row_quantity, quantity)
-            row.setViewVisibility(R.id.row_quantity, if (quantity.isEmpty()) View.GONE else View.VISIBLE)
+            row.setTextColor(R.id.row_quantity, palette.secondary)
+            row.setInt(R.id.row_quantity, "setMaxWidth", layout.quantityWidth)
+            row.setViewVisibility(R.id.row_quantity,
+                if (quantity.isNotEmpty() && layout.quantityWidth > 0) View.VISIBLE else View.GONE)
             val actionLabel = if (list.kind == ListKind.SHOPPING) "已购买" else "已完成"
             row.setContentDescription(R.id.row_check, "标记『${item.title}』为$actionLabel")
-            row.setContentDescription(R.id.row_title,
-                if (quantity.isEmpty()) item.title else "${item.title}，数量 $quantity")
-            row.setContentDescription(R.id.row_quantity, "")
-            row.setOnClickPendingIntent(R.id.row_check, intents.complete(item))
-            row.setOnClickPendingIntent(R.id.row_title, intents.edit(item))
+            val description = item.title + (if (item.pinned) "，已置顶" else "") +
+                (if (quantity.isNotEmpty()) "，数量 $quantity" else "")
+            row.setContentDescription(R.id.row_title, description)
+            bind(row, R.id.row_check, intents?.complete?.invoke(item))
+            bind(row, R.id.row_title, intents?.edit?.invoke(item))
             views.addView(R.id.widget_rows, row)
         }
 
-        views.setTextViewText(R.id.widget_add, "＋ 记一条")
-        views.setContentDescription(R.id.widget_add, "新增一条${list.name}记录")
-        views.setOnClickPendingIntent(R.id.widget_add, intents.add)
+        val feedbackId = if (layout.full) R.id.widget_more else R.id.widget_title
+        val feedbackClickId = if (layout.full) R.id.widget_more else R.id.widget_open
         when {
             footerMessage != null -> {
-                views.setTextViewText(R.id.widget_more, footerMessage)
-                views.setTextColor(R.id.widget_more, palette.error)
-                views.setContentDescription(R.id.widget_more, "$footerMessage，点按打开应用")
-                views.setOnClickPendingIntent(R.id.widget_more, intents.openList)
+                views.setTextViewText(feedbackId, "未完成，点此查看")
+                views.setTextColor(feedbackId, palette.error)
+                views.setContentDescription(feedbackClickId,
+                    "${list.name}，$footerMessage，点按打开应用")
+                bind(views, feedbackClickId, intents?.openList)
             }
-            undo != null && intents.undo != null -> {
-                views.setTextViewText(R.id.widget_more, "已完成 · 撤销")
-                views.setTextColor(R.id.widget_more, palette.primary)
-                views.setContentDescription(R.id.widget_more, "撤销最近一次完成操作")
-                views.setOnClickPendingIntent(R.id.widget_more, intents.undo)
+            undo != null && intents?.undo != null -> {
+                views.setTextViewText(feedbackId, "已完成 · 撤销")
+                views.setTextColor(feedbackId, palette.primary)
+                views.setContentDescription(feedbackClickId, "${list.name}，撤销最近一次完成操作")
+                bind(views, feedbackClickId, intents.undo)
             }
             else -> {
                 views.setTextViewText(R.id.widget_more, "查看全部 ›")
-                views.setTextColor(R.id.widget_more, palette.primary)
                 views.setContentDescription(R.id.widget_more, "查看全部${list.name}记录")
-                views.setOnClickPendingIntent(R.id.widget_more, intents.openList)
+                bind(views, R.id.widget_more, intents?.openList)
             }
+        }
+        if (!layout.full && (footerMessage != null || undo != null && intents?.undo != null)) {
+            views.setViewVisibility(R.id.widget_count, View.GONE)
         }
         return views
     }
 
-    fun error(
-        dark: Boolean,
-        add: PendingIntent,
-        retry: PendingIntent
-    ): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.widget_content)
+    fun error(dark: Boolean, layout: WidgetLayout, add: PendingIntent, retry: PendingIntent): RemoteViews {
         val palette = palette(dark)
-        applyTheme(views, palette)
-        views.setTextViewText(R.id.widget_title, "忘了没")
-        views.setTextViewText(R.id.widget_count, "")
-        views.setTextViewText(R.id.widget_empty, "暂时无法读取 · 点此重试")
+        val views = content(layout, dark, palette)
+        views.setTextViewText(R.id.widget_title, "忘了没 · 重试")
+        views.setContentDescription(R.id.widget_open, "暂时无法读取，点此重试")
+        views.setViewVisibility(R.id.widget_count, View.GONE)
+        showEmpty(views, layout, true, "暂时无法读取 · 点此重试")
         views.setContentDescription(R.id.widget_empty, "暂时无法读取，点此重试")
-        views.setOnClickPendingIntent(R.id.widget_empty, retry)
-        views.setViewVisibility(R.id.widget_empty, View.VISIBLE)
-        views.removeAllViews(R.id.widget_rows)
-        views.setTextViewText(R.id.widget_add, "＋ 记一条")
-        views.setOnClickPendingIntent(R.id.widget_add, add)
+        bind(views, R.id.widget_open, retry)
+        bind(views, R.id.widget_empty, retry)
+        bind(views, R.id.widget_header_add, add)
+        bind(views, R.id.widget_add, add)
+        views.setContentDescription(R.id.widget_header_add, "新增记录")
         views.setTextViewText(R.id.widget_more, "重试")
         views.setTextColor(R.id.widget_more, palette.error)
-        views.setOnClickPendingIntent(R.id.widget_more, retry)
+        bind(views, R.id.widget_more, retry)
         return views
     }
 
-    private fun applyTheme(views: RemoteViews, palette: WidgetPalette) {
-        views.setInt(R.id.widget_root, "setBackgroundResource", palette.background)
+    private fun content(layout: WidgetLayout, dark: Boolean, palette: WidgetPalette): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.widget_content)
+        views.setInt(android.R.id.background, "setBackgroundResource", 0)
+        views.setImageViewBitmap(android.R.id.background, WidgetGlass.background(context, layout, dark))
+        views.setViewPadding(R.id.widget_stack, 0, layout.verticalPadding, 0, layout.verticalPadding)
+        views.setViewPadding(R.id.widget_header, layout.horizontalPadding, 0, layout.horizontalPadding, 0)
+        views.setViewPadding(R.id.widget_footer, layout.horizontalPadding, 0, layout.horizontalPadding, 0)
+        views.setInt(R.id.widget_title, "setHeight", layout.controlHeight)
+        views.setInt(R.id.widget_add, "setHeight", layout.controlHeight)
+        views.setInt(R.id.widget_more, "setHeight", layout.controlHeight)
+        views.setInt(R.id.widget_gap, "setHeight", layout.contentGap)
+        views.setInt(R.id.widget_more, "setMaxWidth",
+            ((layout.widthDp * context.resources.displayMetrics.density -
+                layout.horizontalPadding * 2) / 2).toInt())
+        views.setViewVisibility(R.id.widget_footer, if (layout.full) View.VISIBLE else View.GONE)
+        views.setViewVisibility(R.id.widget_header_add, if (layout.full) View.GONE else View.VISIBLE)
+        views.setViewVisibility(R.id.widget_count, if (layout.showCount) View.VISIBLE else View.GONE)
         views.setTextColor(R.id.widget_title, palette.text)
         views.setTextColor(R.id.widget_count, palette.secondary)
         views.setTextColor(R.id.widget_empty, palette.secondary)
         views.setTextColor(R.id.widget_add, palette.primary)
         views.setTextColor(R.id.widget_more, palette.primary)
+        views.setInt(R.id.widget_add_icon, "setColorFilter", palette.primary)
+        return views
+    }
+
+    private fun showEmpty(views: RemoteViews, layout: WidgetLayout, empty: Boolean, text: String) {
+        views.setViewVisibility(R.id.widget_empty,
+            if (empty && layout.contentHeight >= layout.controlHeight) View.VISIBLE else View.GONE)
+        views.setTextViewText(R.id.widget_empty, text)
+        views.setViewPadding(R.id.widget_empty, layout.horizontalPadding, 0, layout.horizontalPadding, 0)
+    }
+
+    private fun bind(views: RemoteViews, id: Int, intent: PendingIntent?) {
+        if (intent != null) views.setOnClickPendingIntent(id, intent)
     }
 
     private fun palette(dark: Boolean) = if (dark) WidgetPalette(
@@ -146,16 +172,13 @@ class WidgetRenderer(private val context: Context) {
         secondary = context.getColor(R.color.widget_dark_secondary),
         primary = context.getColor(R.color.widget_dark_primary),
         error = context.getColor(R.color.widget_dark_error),
-        background = R.drawable.widget_background_dark,
         checkIcon = R.drawable.widget_check_ring_dark
     ) else WidgetPalette(
         text = context.getColor(R.color.widget_light_text),
         secondary = context.getColor(R.color.widget_light_secondary),
         primary = context.getColor(R.color.widget_light_primary),
         error = context.getColor(R.color.widget_light_error),
-        background = R.drawable.widget_background_light,
         checkIcon = R.drawable.widget_check_ring_light
     )
 
-    private fun kindLabel(kind: ListKind) = if (kind == ListKind.SHOPPING) "待买" else "待办"
 }
