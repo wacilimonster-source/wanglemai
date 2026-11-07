@@ -65,39 +65,58 @@ fun ManageListsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp))
         if (current.isEmpty()) {
-            Text("正在读取清单…", Modifier.padding(vertical = 24.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        current.forEach { list ->
-            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(list.name)
-                    Text(
-                        buildString {
-                            if (list.isDefault) append("默认清单 · ")
-                            append("${counts[list.id] ?: 0} 条记录")
-                            if (list.isDefault) append(" · 不可删除")
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                TextButton(onClick = {
-                    renameTarget = list
-                    nameText = list.name
-                    dialogError = null
-                    showNameDialog = true
-                }) { Text("改名") }
-                TextButton(
-                    enabled = !list.isDefault,
-                    onClick = {
-                        deleteTarget = list
-                        deleteError = null
-                    }
-                ) { Text("删除") }
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("正在读取清单…", Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            HorizontalDivider()
+        }
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                current.forEachIndexed { index, list ->
+                    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(list.name)
+                            Text(
+                                buildString {
+                                    if (list.isDefault) append("默认清单 · ")
+                                    append("${counts[list.id] ?: 0} 条记录")
+                                    if (list.isDefault) append(" · 不可删除")
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        TextButton(onClick = {
+                            renameTarget = list
+                            nameText = list.name
+                            dialogError = null
+                            showNameDialog = true
+                        }) { Text("改名") }
+                        TextButton(
+                            enabled = !list.isDefault,
+                            onClick = {
+                                deleteTarget = list
+                                deleteError = null
+                            }
+                        ) { Text("删除") }
+                    }
+                    if (index < current.lastIndex) {
+                        HorizontalDivider(
+                            Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    }
+                }
+            }
         }
         Spacer(Modifier.height(20.dp))
         Button(
@@ -107,7 +126,8 @@ fun ManageListsScreen(
                 dialogError = null
                 showNameDialog = true
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium
         ) { Text("＋ 新建$kindWord 清单") }
         Spacer(Modifier.height(32.dp))
     }

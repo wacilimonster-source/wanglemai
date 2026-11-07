@@ -101,7 +101,13 @@ class WidgetUpdateCoordinator(
         val fontScale = context.resources.configuration.fontScale.coerceAtLeast(1f)
         val rowHeight = (if (compact) 48 else 52) * fontScale
         val maxRows = if (large) 7 else 3
-        val limit = floor(((heightDp - 120).coerceAtLeast(1) / rowHeight)).toInt().coerceIn(1, maxRows)
+        // 0 rows is allowed at extreme min sizes: the widget then keeps title + footer only
+        // instead of forcing a clipped row (development.md §布局与缩放). One row survives while
+        // at least three quarters of its height fits, matching Launcher min-height slack.
+        val rowSpace = (heightDp - 120).coerceAtLeast(1)
+        val limit = floor(rowSpace / rowHeight).toInt()
+            .let { if (it == 0 && rowSpace >= rowHeight * 3 / 4) 1 else it }
+            .coerceIn(0, maxRows)
         val rows = dao.widgetItems(list.id, limit)
         val total = dao.count(list.id)
         val undoEntity = if (config != null) dao.undo(widgetId) else null

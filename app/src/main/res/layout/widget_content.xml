@@ -24,8 +24,8 @@
             android:ellipsize="end"
             android:text="忘了没"
             android:textColor="@color/widget_light_text"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:textSize="16sp"
+            android:fontFamily="sans-serif-medium" />
 
         <TextView
             android:id="@+id/widget_count"
@@ -69,7 +69,7 @@
             android:gravity="center_vertical"
             android:text="＋ 记一条"
             android:textColor="@color/widget_light_primary"
-            android:textSize="15sp" />
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/widget_more"

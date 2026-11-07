@@ -29,9 +29,11 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -40,6 +42,18 @@ import com.wanglemai.app.domain.ListKind
 import com.wanglemai.app.domain.ThemeMode
 import com.wanglemai.app.ui.theme.WanglemaiTheme
 import kotlinx.coroutines.delay
+
+/** 28% warm-brown scrim behind the editor sheet (development.md §2.2). */
+private val WarmScrim = Color(0xFF383129).copy(alpha = 0.28f)
+
+/** Warm input treatment: background fill, 1dp outlineVariant border, primary 2dp when focused. */
+@Composable
+private fun warmFieldColors() = OutlinedTextFieldDefaults.colors(
+    unfocusedContainerColor = MaterialTheme.colorScheme.background,
+    focusedContainerColor = MaterialTheme.colorScheme.background,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+)
 
 class QuickEntryActivity : ComponentActivity() {
     private val editorVm: EditorViewModel by viewModels {
@@ -143,7 +157,7 @@ private fun EditorSheet(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.34f))) {
+    Box(Modifier.fillMaxSize().background(WarmScrim)) {
         Box(
             Modifier.fillMaxSize().clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -151,13 +165,13 @@ private fun EditorSheet(
             ) { if (!state.busy) onClose() })
         Surface(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.94f),
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            tonalElevation = 2.dp
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
                     Box(Modifier.size(width = 36.dp, height = 4.dp)
-                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
                             RoundedCornerShape(2.dp)))
                 }
                 Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp),
@@ -218,6 +232,8 @@ private fun EditorSheet(
                         maxLines = if (state.batch) 10 else 1,
                         enabled = state.loaded && !state.busy && !state.itemMissing,
                         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                        textStyle = TextStyle(fontSize = 20.sp, lineHeight = 30.sp),
+                        colors = warmFieldColors(),
                         keyboardOptions = KeyboardOptions(
                             imeAction = if (state.batch) ImeAction.Default else ImeAction.Done
                         ),
@@ -255,10 +271,17 @@ private fun EditorSheet(
 
                     Text("放进哪份清单", style = MaterialTheme.typography.labelLarge)
                     Box {
-                        OutlinedButton(
+                        Button(
                             onClick = { listMenu = true },
                             enabled = state.loaded && !state.busy && !state.itemMissing,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 0.dp, pressedElevation = 0.dp
+                            ),
                         ) {
                             val target = state.lists.firstOrNull { it.id == state.listId }
                             Text(
@@ -290,6 +313,7 @@ private fun EditorSheet(
                                 singleLine = true,
                                 enabled = !state.busy && !state.itemMissing,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                colors = warmFieldColors(),
                                 modifier = Modifier.weight(1f)
                             )
                             OutlinedTextField(
@@ -298,6 +322,7 @@ private fun EditorSheet(
                                 label = { Text("单位") },
                                 singleLine = true,
                                 enabled = !state.busy && !state.itemMissing,
+                                colors = warmFieldColors(),
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -310,6 +335,7 @@ private fun EditorSheet(
                         enabled = !state.busy && !state.itemMissing,
                         minLines = 2,
                         maxLines = 5,
+                        colors = warmFieldColors(),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Row(
@@ -340,7 +366,7 @@ private fun EditorSheet(
                     }
                     Spacer(Modifier.height(12.dp))
                 }
-                Surface(tonalElevation = 2.dp) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
                     Column(
                         Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
                             .padding(horizontal = 20.dp, vertical = 12.dp)
@@ -364,7 +390,8 @@ private fun EditorSheet(
                             Button(
                                 onClick = { vm.save(continueAfter = false) },
                                 enabled = state.canSave,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.medium,
                             ) {
                                 Text(when {
                                     state.busy -> "保存中…"

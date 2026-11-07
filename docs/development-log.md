@@ -1,5 +1,82 @@
 # Android 开发与交接记录
 
+## 未发版：暖米色视觉改造 / 2026-11-07
+
+按 `docs/visual-refresh/development.md`（提案 v1）把应用与 Widget 从冷绿主题改为「奶油米 + 暖纸白 + 焦糖棕」，业务逻辑（repository、ViewModel、更新、备份、草稿、批量录入）未动，全部文案锚点保留（FrameworkUiTest 的文本/描述定位逐字未改）。
+
+### 变更
+
+- 主题基线（任务 1）：`Theme.kt` 换浅/深两套暖色 scheme（secondary/tertiary 映射 primary、container 映射 surfaceVariant、`surfaceContainer*` 显式暖阶），新增 Typography（页面标题 26/36、面板标题 22/32、正文 16/24、辅助 12/18、按钮 14/20、导航 12/16）与 Shapes（分段 11 / 搜索 14 / 按钮 15 / 列表组 20 / 面板 28）；`values{,-night}/colors.xml`、`widget_colors.xml` 换暖 token；Widget 玻璃底改为浅色奶油 92% / 深色暖棕 94% + 1dp 顶部高光 + 1dp 描边（layer-list）；启动图标换焦糖棕。
+- 主清单（任务 2）：底部导航字符图标 ✓⌑⚙ 换 24dp 线性矢量（待办/待买/设置）；清单选择器浅填充；搜索浅底 14dp 圆角 + 前置搜索图标；未完成/已完成 FilterChips 合并 40dp 分段控件（selectableGroup + RadioButton 语义，选中 surface 底 + primary 字）并加“N 项待办/待买”计数；列表包进 20dp 圆角 surface 组 + 组内细分隔线；行高 68/56dp、方形 Checkbox 换 48dp 触区圆形完成控件（20dp 圆环/焦糖实心勾）、置顶改 pin 矢量；FAB 移除，改导航上方整宽「＋ 记一条」。
+- 编辑/管理/设置（任务 3）：编辑面板顶部 28dp 圆角、遮罩改 28% 暖棕、输入框统一 background 填充 + outlineVariant 边线 + 聚焦 primary 2dp、主输入 20/30sp、清单选择浅填充、底栏 surfaceContainer；清单管理行进同款分组面；设置重组为「外观与桌面 / 清单与数据 / 关于忘了没」三组 18dp 圆角卡片（行 ≥56dp），检查更新/备份/pin 全部状态与文案不变。
+- Widget 与配置（任务 4）：`widget_content/row/row_compact` 字号对齐 token（标题 16 Medium、正文 14、数量 12、入口 14）；row_check 字符 ○ 换 20dp 圆环矢量 ImageView（浅/深两套烘焙色，保留 id 与 48dp 触区、PendingIntent 与语义不变）；`WidgetUpdateCoordinator` 行数公式改为 floor + “剩余空间 ≥ 3/4 行高保 1 行”，真极小尺寸折叠为标题+页脚入口（渲染器区分“无记录”与“空间不足”文案）；配置页顶部新增随主题/密度即时切换的材质预览。
+
+### 过程中修复的既有缺陷
+
+- `ApkDownloader` 双源回退循环不检查协程取消：被取消的旧任务会继续走 fallback 并清理目录，与替代它的新下载竞态（可能删除新任务刚写好的安装包）。已在回退处补 `ensureActive()`。
+
+### 实际结果
+
+| 检查 | 结果 | 证据 |
+|---|---|---|
+| 原型校验 | verify.cjs 27 项通过；npm test 30 项通过 | prototype/warm/verify.cjs、tests/prototype.test.cjs |
+| JVM 单元测试 | 58/58 通过 | ValidationTest 13、BackupCodecTest 12、UpdateCheckerTest 13、ApkDownloaderTest 14、UpdateCenterTest 6 |
+| 仪器测试 | OK (29 tests) | FrameworkUiTest 13 + RepositoryTest 16（emulator-5556 / API34；一次 TopResumedActivityChange 平台级崩溃复跑通过） |
+| Lint / 构建 | 0 error，`assembleDebug`/`lintDebug`/`assembleDebugAndroidTest` 通过 | gradle 输出 |
+| 截图 | 11 张浅/深/130% 字号抽查 | docs/visual-refresh/native/ |
+
+截图（docs/visual-refresh/native/）：主屏浅/深、已完成筛选、待买、编辑（键盘开）、设置、设置-检查更新、清单管理、Widget 标准+大号浅/深（debug harness）、130% 字号抽查。
+
+### 待验项（如实记录）
+
+- 配置页截图未捕获：`appwidget bind` 在 API34 shell 不支持、复用 AVD 残留安装成功页拦截 shell 直启，且模拟器随后被另一会话占用；配置页功能由 FrameworkUiTest 两项配置用例覆盖（断言标题/控件/保存路径，均通过），预览卡渲染已被这些用例间接验证。
+- 360dp 窄屏、200% 字号、TalkBack 人工验收、API26/31/36、HyperOS 真机与多壁纸对比矩阵未执行（沿用 README 已知限制清单）。
+
+---
+
+## 未发版：检查更新改为客户端内下载安装 / 2026-11-06
+
+设置页“检查更新”从“跳浏览器下载”改为客户端内直接下载安装包；版本号不变（versionCode 4 / 0.2.2-mvp），随下次发版发布。
+
+### 变更
+
+- 新增 `data/update/ApkDownloader.kt`：jsDelivr 国内加速优先，失败自动切 GitHub；`HttpURLConnection` 流式下载，边下边算 SHA256，完成后与清单校验值比对，不匹配即删除文件；下载前校验 URL 前缀（GitHub releases 下载 / jsDelivr 镜像，复用 `UpdateChecker` 白名单）；取消/失败清理半成品与目录内旧 APK。
+- 设置页：两个浏览器下载按钮替换为“下载安装包”+ 进度条（总量未知时为不定态）+“取消下载”；完成后显示“安装”“重新下载”，并标注“已通过国内加速源下载”；保留“打开发布页”。
+- 安装：`FileProvider` + `ACTION_INSTALL_PACKAGE`；未授予“安装未知应用”时先跳系统设置页并提示，授权后返回再点“安装”。
+- 权限与资源：新增 `REQUEST_INSTALL_PACKAGES`（仅用于调起系统安装器，安装由用户在系统弹窗确认）和 `res/xml/file_paths.xml`。
+- 测试：新增 `ApkDownloaderTest` 14 项（镜像优先、双源回退、中断回退、SHA256 不匹配删文件、进度单调、不定长、截断、URL/文件名白名单、旧 APK 清理、无源报错）。
+- 文档同步：README、docs/03、docs/07 中“不自动下载/安装”的说法更新为“客户端内下载、用户确认安装”。
+
+### 交互修订（2026-11-07，未发版）
+
+自查发现三处交互问题并修复：
+
+- 下载/检查状态从 `SettingsScreen` 的 `remember` 提升到应用级 `UpdateCenter`（挂 `AppContainer`，跑在应用 scope）：切页签、旋转屏幕不再丢进度，下载在后台继续，设置页只渲染 StateFlow。取消与重启下载用“仅当前任务可写状态”的约定避免旧任务覆盖新状态。
+- 下载完成新增全局 Snackbar（`MainActivity` 收 `UpdateCenter.events`）：「更新包已下载并通过 SHA256 校验」带「安装」动作，在其他页签也能看到并可一键调起安装；设置页 Ready 文案补 `liveRegion`（TalkBack 可感知完成）。
+- 进度回调携带当前下载源：下载中显示“正在通过国内加速源下载 / 正在从 GitHub 下载”，jsDelivr 失败切 GitHub 时显示“加速源不可用，已改用 GitHub 重新下载”，不再出现无解释的进度倒退。
+
+新增 `UpdateCenterTest` 6 项（完成态与加速标记、中断回退标记、双源失败、取消回 Idle 且无残留、重启替换旧状态、初始空态）。
+
+### 实际结果
+
+| 检查 | 结果 | 证据 |
+|---|---|---|
+| JVM 单元测试 | 58/58 通过 | ValidationTest 13、BackupCodecTest 12、UpdateCheckerTest 13、ApkDownloaderTest 14、UpdateCenterTest 6 |
+| Debug 构建 | 通过，0 warning | `:app:assembleDebug :app:testDebugUnitTest` |
+| 模拟器端到端 | 通过 | 见下与截图 |
+
+端到端（Android 14/API34 模拟器，工程临时标为 versionCode 3 / 0.2.1-mvp，验完还原）：检查更新显示“发现新版本：v0.2.2”和 SHA256；点“下载安装包”后**立刻切到待办页签**，下载在后台继续完成，待办页弹出全局 Snackbar「更新包已下载并通过 SHA256 校验」并带「安装」动作；回到设置页 Ready 状态完整保留（含“已通过国内加速源下载”标注）；点“安装”跳系统授权页，开启后返回再点“安装”，系统安装器弹出“Do you want to update this app?”，确认后覆盖安装成功，`dumpsys package` 显示 versionCode=4 / 0.2.2-mvp（即发布的 v0.2.2 APK，与 Release 同一调试签名）。
+
+环境备注：`emulator-5554` 当时被另一会话的阅读器应用反复抢占前台，交互修订的端到端改在独立启动的 `perf_verify` AVD 上完成；该 AVD 复用残留的旧安装成功页会拦截新的安装 intent（deliver-to-top），force-stop `com.google.android.packageinstaller` 并移除任务后安装流程恢复正常——真机上用户点过 Done/Open 后不存在该残留。
+
+注意：更新包下载期间仍只申请 INTERNET 与 REQUEST_INSTALL_PACKAGES，无后台轮询；安装始终由用户在系统弹窗确认，与 README 声明一致。
+
+最终状态：安装完成的 0.2.2（即发布 APK）再次“检查更新”显示“已是最新版本：v0.2.2”，此时只保留“打开发布页”，无下载按钮（该安装包是旧版构建，新下载 UI 随下次发版生效）。
+
+截图：[发现新版本与下载安装包](android-update-inapp-download-button.png)、[下载完成已校验](android-update-inapp-downloaded.png)、[系统安装器](android-update-inapp-installer.png)、[最终已是最新](android-update-inapp-latest.png)、[其他页签的全局完成通知](android-update-inapp-snackbar.png)。
+
+---
+
 ## 当前交付：0.2.2-mvp / 2026-11-06
 
 小部件底色从实色改为 C · 暖调半透明玻璃。

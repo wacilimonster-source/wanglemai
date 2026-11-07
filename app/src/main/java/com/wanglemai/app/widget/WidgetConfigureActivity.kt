@@ -7,19 +7,31 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.room.withTransaction
+import com.wanglemai.app.R
 import com.wanglemai.app.app
 import com.wanglemai.app.data.db.WidgetConfig
 import com.wanglemai.app.domain.*
@@ -124,6 +136,17 @@ class WidgetConfigureActivity : ComponentActivity() {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(20.dp))
+                    val previewDark = when (theme) {
+                        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                        ThemeMode.LIGHT -> false
+                        ThemeMode.DARK -> true
+                    }
+                    WidgetMaterialPreview(
+                        listName = lists.firstOrNull { it.id == selectedListId }?.name ?: "清单",
+                        dark = previewDark,
+                        compact = density == WidgetDensity.COMPACT,
+                    )
+                    Spacer(Modifier.height(20.dp))
                     Text("选择清单", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     lists.forEach { list ->
@@ -182,10 +205,11 @@ class WidgetConfigureActivity : ComponentActivity() {
                     }
                     Spacer(Modifier.height(24.dp))
                 }
-                Surface(tonalElevation = 2.dp) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
                     Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
                         Button(onClick = { save() }, enabled = loaded && !busy && selectedListId.isNotEmpty(),
-                            modifier = Modifier.fillMaxWidth()) {
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium) {
                             Text(if (busy) "保存中…" else "保存并添加")
                         }
                         TextButton(onClick = { finish() }, enabled = !busy,
@@ -195,6 +219,45 @@ class WidgetConfigureActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+}
+
+/** Static material preview of the widget glass, tracking the selected theme and density. */
+@Composable
+private fun WidgetMaterialPreview(listName: String, dark: Boolean, compact: Boolean) {
+    val text = colorResource(if (dark) R.color.widget_dark_text else R.color.widget_light_text)
+    val secondary = colorResource(if (dark) R.color.widget_dark_secondary else R.color.widget_light_secondary)
+    val primary = colorResource(if (dark) R.color.widget_dark_primary else R.color.widget_light_primary)
+    val ring = painterResource(if (dark) R.drawable.widget_check_ring_dark else R.drawable.widget_check_ring_light)
+    val fill = Color(if (dark) 0xF0312920 else 0xEBFFF8EA)
+    val stroke = Color(if (dark) 0x30FFE9C9 else 0xC2FFFFFF)
+    val glass = RoundedCornerShape(24.dp)
+    val rowHeight = if (compact) 48.dp else 52.dp
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(glass)
+            .background(fill)
+            .border(1.dp, stroke, glass)
+            .padding(12.dp)
+    ) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(listName, color = text, fontSize = 16.sp, fontWeight = FontWeight.Medium,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text("4 项", color = secondary, fontSize = 12.sp)
+        }
+        listOf("给阳台的绿植浇水", "把周末的照片洗出来").forEach { sample ->
+            Row(Modifier.fillMaxWidth().heightIn(min = rowHeight), verticalAlignment = Alignment.CenterVertically) {
+                Icon(ring, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(sample, color = text, fontSize = 14.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("＋ 记一条", color = primary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text("查看全部 ›", color = primary, fontSize = 12.sp)
         }
     }
 }

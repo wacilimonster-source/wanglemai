@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>忘了没 · 暖米色视觉提案</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="index.html"><span class="brand-mark">✓</span>忘了没<span class="brand-en">a little room for life</span></a>
+    <span class="edition">VISUAL STUDY　/　02　·　2026.11</span>
+    <button class="quiet" id="theme">夜间预览</button>
+  </header>
+  <main class="board">
+    <aside class="introduction">
+      <p class="eyebrow">把生活，轻轻记住</p>
+      <h1>小事有处放，<br>心里就有光。</h1>
+      <p class="lead">一份温柔的清单，<br>装下日常，也留一点空白。</p>
+      <nav class="scenes" aria-label="原型页面">
+        <button class="selected" data-scene="todo"><span>01</span> 随手待办 <span>↗</span></button>
+        <button data-scene="shopping"><span>02</span> 日常采购 <span>↗</span></button>
+        <button data-scene="editor"><span>03</span> 快速记录 <span>↗</span></button>
+        <button data-scene="config"><span>04</span> 小部件配置 <span>↗</span></button>
+        <button data-scene="settings"><span>05</span> 设置 <span>↗</span></button>
+      </nav>
+      <div class="palette" aria-label="暖米色配色"><span style="--swatch:#F6F1E8"></span><span style="--swatch:#FFFBF4"></span><span style="--swatch:#E8DDCB"></span><span style="--swatch:#8A5335"></span><span style="--swatch:#383129"></span></div>
+      <p class="tiny">奶油底色 / 磨砂玻璃 / 焦糖点缀</p>
+      <p class="board-note">可点击勾选、搜索与新增。<br>演示数据仅保留在本次页面会话。</p>
+    </aside>
+    <section class="app-preview" aria-label="App 交互原型">
+      <div class="preview-label"><span>THE APP</span><span>01 / 日常的一页</span></div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span class="camera"></span><span>▴ ▴ ▰</span></div>
+        <div id="app"></div>
+        <div class="home-indicator"></div>
+        <div id="toast" role="status" aria-live="polite"></div>
+        <dialog id="editor" aria-labelledby="editor-heading"></dialog>
+      </div>
+      <p class="caption">少一点打扰，多一点从容。</p>
+    </section>
+    <section class="widget-preview" aria-label="桌面小部件预览">
+      <div class="preview-label"><span>ON YOUR DESK</span><span>02 / 一眼就记得</span></div>
+      <div class="wallpaper" id="wallpaper">
+        <div class="desktop-date">星期六 · 十一月七日</div>
+        <div class="desktop-time">09:41</div>
+        <div id="widgets"></div>
+        <span class="wallpaper-signature">a softer kind of everyday.</span>
+      </div>
+      <div class="material-controls"><button class="quiet" id="wall">切换深色壁纸</button><button class="quiet" id="material" aria-pressed="false">查看原生近似</button></div>
+      <p class="tiny material-note" id="material-note">设计目标 · 背景模糊 24px + 浅米色透光层</p>
+    </section>
+  </main>
+  <footer><span>忘了没　/　暖米色视觉提案</span><span>APP · WIDGET · DESIGN HANDOFF</span><button class="quiet" id="reset">重置演示</button></footer>
+  <script src="app.js"></script>
+</body>
+</html>

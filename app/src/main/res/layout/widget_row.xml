@@ -6,14 +6,20 @@
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
-    <TextView
+    <FrameLayout
         android:id="@+id/row_check"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:gravity="center"
-        android:text="○"
-        android:textColor="@color/widget_light_secondary"
-        android:textSize="25sp" />
+        android:gravity="center">
+
+        <ImageView
+            android:id="@+id/row_check_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/widget_check_ring_light" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/row_title"
@@ -25,7 +31,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:textColor="@color/widget_light_text"
-        android:textSize="16sp" />
+        android:textSize="14sp" />
 
     <TextView
         android:id="@+id/row_quantity"

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="widget_light_text">#202D28</color>
-    <color name="widget_light_secondary">#65736B</color>
-    <color name="widget_light_primary">#215B45</color>
-    <color name="widget_light_error">#A32929</color>
-    <color name="widget_dark_text">#E7EEE8</color>
-    <color name="widget_dark_secondary">#B2C0B7</color>
-    <color name="widget_dark_primary">#A5D7B9</color>
-    <color name="widget_dark_error">#FFB4AB</color>
+    <color name="widget_light_text">#383129</color>
+    <color name="widget_light_secondary">#6F6050</color>
+    <color name="widget_light_primary">#8A5335</color>
+    <color name="widget_light_error">#A33E32</color>
+    <color name="widget_dark_text">#F4EADC</color>
+    <color name="widget_dark_secondary">#D3C2AC</color>
+    <color name="widget_dark_primary">#E5B68E</color>
+    <color name="widget_dark_error">#FFB4A8</color>
 </resources>

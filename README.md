@@ -1,14 +1,14 @@
-# 忘了没 · Android MVP 交付 v0.2.2
+# 忘了没 · Android MVP 交付 v0.3.0
 
-日期：2026-11-06。状态：**原生 MVP 功能已实现并在 Android 14/API34 模拟器完成自动化验证**；澎湃 OS 3 真机普通桌面、API26/31/36、TalkBack 人工验收和性能目标仍未验证。已确认系统负一屏只接受小米小部件；因本项目不上架应用商店，小米小部件准入不成立，**负一屏取消开发**。
+日期：2026-11-07。状态：**原生 MVP 功能已实现并在 Android 14/API34 模拟器完成自动化验证**；澎湃 OS 3 真机普通桌面、API26/31/36、TalkBack 人工验收和性能目标仍未验证。已确认系统负一屏只接受小米小部件；因本项目不上架应用商店，小米小部件准入不成立，**负一屏取消开发**。
 
 ## 当前交付
 
 - GitHub 仓库：<https://github.com/wacilimonster-source/wanglemai>
 - GitHub Releases（检查更新使用）：<https://github.com/wacilimonster-source/wanglemai/releases>
 - 原生工程：`app/`，Kotlin + Jetpack Compose/Material3 + Room + Coroutines/StateFlow。
-- Debug APK：[wanglemai-0.2.2-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.2.2/wanglemai-0.2.2-debug.apk)（versionCode 4，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
-- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.2.2 APK SHA256 `9aa9d892a252c7e83c5d6e6d475663b68ec0f0fb8b065c4ff5a3fb8c59e416fa`。
+- Debug APK：[wanglemai-0.3.0-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.0/wanglemai-0.3.0-debug.apk)（versionCode 5，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
+- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.3.0 APK SHA256 见 SHA256SUMS。
 - 实测记录：[开发记录](docs/development-log.md)、[验收记录](docs/03-acceptance.md)、[框架状态](docs/07-framework-status.md)。
 - 自动化证据：[构建与 JVM](docs/evidence/android-build-0.2.2.txt)、[设备测试](docs/evidence/android-instrumentation-0.2.2.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.2.2.json)。
 
@@ -19,11 +19,12 @@
 - 最多 50 条原子批量录入，按 CRLF/LF 拆分、忽略空行、错误指出原始行号、同 commandId 重试不重复写入。
 - 字面搜索（忽略英文大小写，`%`/`_` 不作通配符）、按清单/状态过滤、清单与类型切换记忆。
 - Room 长期草稿：300ms debounce、onStop 补写、草稿恢复/丢弃、编辑冲突不静默覆盖、保存成功才清除。
-- 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与密度；暖调半透明玻璃底色（浅色奶油 76% / 深色墨绿 80%，1dp 描边，24dp 圆角）；多实例独立、主动刷新、小部件内完成与撤销、冲突页脚、空态/错误态。
+- 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与密度；暖调半透明玻璃底色（浅色奶油 92% / 深色暖棕 94%，1dp 顶部高光 + 1dp 描边，24dp 圆角）；多实例独立、主动刷新、小部件内完成与撤销、冲突页脚、空态/错误态。
+- 暖米色视觉体系（2026-11 提案 v1，见 docs/visual-refresh/）：奶油底 + 暖纸白内容面 + 焦糖棕主色，圆形完成控件、分段筛选、整宽新增入口、24dp 线性矢量图标；浅/深两套显式 token。
 - Widget 的新增/正文/标题点击直接通过 `PendingIntent.getActivity` 进入 `QuickEntryActivity`，没有 Receiver/Service 间接启动编辑页。
 - SAF JSON 导出与导入：5MB 上限、严格 schema 校验、预览数量、事务合并、同 ID 保留本机、名称冲突加“（导入N）”、失败不部分写库。
 - 浅/深色主题；应用主题可跟随系统或显式切换。
-- 设置页“检查更新”：GitHub Releases API 优先，失败时回退到 jsDelivr 静态清单；显示版本、SHA256、GitHub/国内加速下载和发布页。仅手动触发，不自动下载/安装。
+- 设置页“检查更新”：GitHub Releases API 优先，失败时回退到 jsDelivr 静态清单；发现新版本后在客户端内直接下载安装包（国内加速优先，失败自动改用 GitHub），下载时流式校验 SHA256，完成后由用户确认调起系统安装器。仅手动触发，无后台轮询。
 
 ## 快速构建与测试
 
@@ -82,11 +83,11 @@ adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.t
 
 - 未在小米/HyperOS 3 真机验证普通桌面；系统桌面刷新、宿主缓存、省电策略结论待补。
 - 负一屏只接受小米小部件，而小米小部件要求应用商店上架/审核；自有 APK 下发不满足，已取消负一屏开发。
-- `INTERNET` 权限仅用于用户手动检查 GitHub Releases；没有账号、云同步或后台网络任务。
+- `INTERNET` 权限仅用于用户手动检查更新和下载安装包；`REQUEST_INSTALL_PACKAGES` 仅用于调起系统安装器（首次安装更新会引导开启“安装未知应用”）；没有账号、云同步或后台网络任务，安装始终由用户在系统弹窗确认。
 - 只验证 Android 14/API34 模拟器；API26、API31、API36 运行未执行。
 - TalkBack 只做了语义与触控目标实现检查，未做完整人工验收；性能 P95 未测量。
 - 系统重启只验证了 App 数据恢复；真实桌面小部件实例在重启/APK 升级后的恢复未在系统 Launcher 上验证。
 - 数据库写满/存储失败未做故障注入；输入保留与重试由实现保证但未专门测试。
 - 草稿 onStop 写盘不能保证突然断电前最后 300ms 的输入。
-- jsDelivr 国内 CDN 的可用性不保证；失败时仍可使用 GitHub 下载，公开分发的 debug 签名不应作为安全更新身份。
+- jsDelivr 国内 CDN 的可用性不保证；客户端内下载失败会自动改用 GitHub，公开分发的 debug 签名不应作为安全更新身份。
 - RemoteViews 不支持实时背景模糊；小部件采用半透明色面 + 1dp 描边模拟玻璃效果。

@@ -24,7 +24,8 @@ private data class WidgetPalette(
     val secondary: Int,
     val primary: Int,
     val error: Int,
-    val background: Int
+    val background: Int,
+    val checkIcon: Int
 )
 
 /** Pure RemoteViews rendering; all data is resolved before this class is called. */
@@ -51,8 +52,15 @@ class WidgetRenderer(private val context: Context) {
         val empty = rows.isEmpty()
         views.setViewVisibility(R.id.widget_empty, if (empty) View.VISIBLE else View.GONE)
         if (empty) {
-            views.setTextViewText(R.id.widget_empty,
-                "还没有${kindLabel(list.kind)}，想到就记下来。")
+            if (totalActive > 0) {
+                // Too small for even one row: keep title + footer entries, never force a clipped row.
+                views.setTextViewText(R.id.widget_empty, "空间较小 · 打开查看全部")
+                views.setContentDescription(R.id.widget_empty, "空间较小，点此打开${list.name}")
+                views.setOnClickPendingIntent(R.id.widget_empty, intents.openList)
+            } else {
+                views.setTextViewText(R.id.widget_empty,
+                    "还没有${kindLabel(list.kind)}，想到就记下来。")
+            }
         }
         views.removeAllViews(R.id.widget_rows)
         rows.forEach { item ->
@@ -60,7 +68,7 @@ class WidgetRenderer(private val context: Context) {
                 if (compact) R.layout.widget_row_compact else R.layout.widget_row)
             row.setTextViewText(R.id.row_title, (if (item.pinned) "• " else "") + item.title)
             row.setTextColor(R.id.row_title, palette.text)
-            row.setTextColor(R.id.row_check, palette.secondary)
+            row.setImageViewResource(R.id.row_check_icon, palette.checkIcon)
             row.setTextColor(R.id.row_quantity, palette.secondary)
             val quantity = listOfNotNull(item.quantityDecimal, item.unit).joinToString(" ")
             row.setTextViewText(R.id.row_quantity, quantity)
@@ -138,13 +146,15 @@ class WidgetRenderer(private val context: Context) {
         secondary = context.getColor(R.color.widget_dark_secondary),
         primary = context.getColor(R.color.widget_dark_primary),
         error = context.getColor(R.color.widget_dark_error),
-        background = R.drawable.widget_background_dark
+        background = R.drawable.widget_background_dark,
+        checkIcon = R.drawable.widget_check_ring_dark
     ) else WidgetPalette(
         text = context.getColor(R.color.widget_light_text),
         secondary = context.getColor(R.color.widget_light_secondary),
         primary = context.getColor(R.color.widget_light_primary),
         error = context.getColor(R.color.widget_light_error),
-        background = R.drawable.widget_background_light
+        background = R.drawable.widget_background_light,
+        checkIcon = R.drawable.widget_check_ring_light
     )
 
     private fun kindLabel(kind: ListKind) = if (kind == ListKind.SHOPPING) "待买" else "待办"
