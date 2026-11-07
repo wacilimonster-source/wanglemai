@@ -7,9 +7,11 @@ import androidx.room.Room
 import com.wanglemai.app.data.RoomBackupRepository
 import com.wanglemai.app.data.RoomItemRepository
 import com.wanglemai.app.data.db.AppDatabase
+import com.wanglemai.app.data.update.UpdateCenter
 import com.wanglemai.app.domain.MutationResult
 import com.wanglemai.app.widget.WidgetUpdateCoordinator
 import kotlinx.coroutines.*
+import java.io.File
 
 class WanglemaiApplication : Application() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -27,6 +29,10 @@ class AppContainer(context: Context) {
     val repository = RoomItemRepository(db)
     val backup = RoomBackupRepository(db)
     val widgets = WidgetUpdateCoordinator(context.applicationContext, db, repository)
+    val updates = UpdateCenter(
+        scope = (context.applicationContext as WanglemaiApplication).scope,
+        updatesDir = File(context.filesDir, "updates")
+    )
     suspend fun mutate(block: suspend () -> MutationResult): MutationResult {
         val result = block()
         if (result is MutationResult.Success) runCatching { widgets.refreshAll() }

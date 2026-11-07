@@ -20,7 +20,8 @@ class UpdateException(override val message: String) : Exception(message)
 
 /**
  * Reads the latest public GitHub Release for this repository. No token or account is used.
- * Updates are opened in the browser; nothing is downloaded or installed automatically.
+ * The APK is downloaded inside the app (jsDelivr mirror first, GitHub fallback) and its
+ * SHA256 is verified while streaming; installation only starts after the user confirms.
  *
  * A static manifest on jsDelivr is used only as a fallback when api.github.com is unreachable.
  */
@@ -29,12 +30,19 @@ object UpdateChecker {
     const val RELEASES_URL = "https://github.com/$REPO/releases"
     const val LATEST_RELEASE_API = "https://api.github.com/repos/$REPO/releases/latest"
     const val MIRROR_MANIFEST_URL = "https://cdn.jsdelivr.net/gh/$REPO@main/update/latest.json"
-    private const val RELEASE_PREFIX = "https://github.com/$REPO/releases/"
-    private const val MIRROR_PREFIX = "https://cdn.jsdelivr.net/gh/$REPO@"
+    const val RELEASE_PREFIX = "https://github.com/$REPO/releases/"
+    const val MIRROR_PREFIX = "https://cdn.jsdelivr.net/gh/$REPO@"
     private const val MANIFEST_SCHEMA_VERSION = 1
     private val SAFE_TAG = Regex("^[A-Za-z0-9._-]{1,64}$")
     private val SAFE_ASSET_NAME = Regex("^[A-Za-z0-9._-]+\\.apk$")
     private val SHA256 = Regex("^[0-9a-fA-F]{64}$")
+
+    /** True when [url] points at this repository's GitHub release downloads or its jsDelivr mirror. */
+    fun isTrustedDownloadUrl(url: String): Boolean =
+        url.startsWith("${RELEASE_PREFIX}download/") || url.startsWith(MIRROR_PREFIX)
+
+    /** True when [name] matches the APK asset naming the updater accepts. */
+    fun isTrustedApkAssetName(name: String): Boolean = SAFE_ASSET_NAME.matches(name)
 
     fun parseLatestRelease(json: String, currentVersion: String): UpdateCheckResult {
         val root = parseRoot(json)

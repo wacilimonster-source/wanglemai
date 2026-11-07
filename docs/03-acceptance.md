@@ -74,7 +74,9 @@
 
 **负一屏实测与准入结论（2026-11-06）：** 澎湃 OS 3 负一屏只能添加小米小部件，标准 Android 原生小部件不在入口中；原生小部件只能添加至普通桌面。小米官方要求包含小部件的 APP 先在小米应用商店上架/更新并通过审核、使用企业开发者账号，再提交小部件开放平台审核，且 APP 下架时小部件同步下架；没有侧载/本地白名单路径。因本项目不上架应用商店，负一屏**不适用/不支持，取消开发**；普通桌面标准 Widget 不受影响。
 
-新增（用户授权范围）：设置页 GitHub Releases 检查更新。0.2.1 起 GitHub API 失败会回退到 jsDelivr 静态清单，并提供 GitHub/国内加速下载入口和 SHA256。设备验证：旧 0.2.0 检查到 v0.2.1；新 UI 显示两个下载入口和 SHA256，国内加速入口打开 Chrome；jsDelivr 清单/APK 哈希与 Release 一致；最终 0.2.1 显示已是最新。`UpdateCheckerTest` 13 项覆盖回退逻辑。该功能需要 INTERNET，仅手动触发，不自动下载/安装。
+新增（用户授权范围）：设置页 GitHub Releases 检查更新。0.2.1 起 GitHub API 失败会回退到 jsDelivr 静态清单，并提供 GitHub/国内加速下载入口和 SHA256。设备验证：旧 0.2.0 检查到 v0.2.1；新 UI 显示两个下载入口和 SHA256，国内加速入口打开 Chrome；jsDelivr 清单/APK 哈希与 Release 一致；最终 0.2.1 显示已是最新。`UpdateCheckerTest` 13 项覆盖回退逻辑。该功能需要 INTERNET，仅手动触发。
+
+未发版更新（2026-11-06）：下载不再跳浏览器，改为客户端内完成（jsDelivr 加速优先、失败自动切 GitHub，`ApkDownloaderTest` 14 项覆盖回退/校验/进度），SHA256 下载时流式校验，完成后由用户确认调起系统安装器；新增 `REQUEST_INSTALL_PACKAGES`。端到端记录见 [开发记录](development-log.md)。
 
 ## 性能目标（真机目标，不是已测结果）
 
