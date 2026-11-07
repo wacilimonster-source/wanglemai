@@ -10,6 +10,7 @@ import com.wanglemai.app.data.db.AppDatabase
 import com.wanglemai.app.data.update.UpdateCenter
 import com.wanglemai.app.domain.MutationResult
 import com.wanglemai.app.widget.WidgetUpdateCoordinator
+import com.wanglemai.app.widget.WidgetPinCoordinator
 import kotlinx.coroutines.*
 import java.io.File
 
@@ -29,6 +30,8 @@ class AppContainer(context: Context) {
     val repository = RoomItemRepository(db)
     val backup = RoomBackupRepository(db)
     val widgets = WidgetUpdateCoordinator(context.applicationContext, db, repository)
+    val pinning = WidgetPinCoordinator(context, db, repository, widgets,
+        (context.applicationContext as WanglemaiApplication).scope)
     val updates = UpdateCenter(
         scope = (context.applicationContext as WanglemaiApplication).scope,
         updatesDir = File(context.filesDir, "updates")

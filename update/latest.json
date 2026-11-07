@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "version": "v0.3.2",
-  "releaseName": "忘了没 v0.3.2 · 两排尺寸与超紧凑布局",
-  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.3.2",
-  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.2/wanglemai-0.3.2-debug.apk",
-  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.3.2/releases/wanglemai-0.3.2-debug.apk",
-  "sha256": "9a1c41b59f915035c68c20dbf73f552b7c449de5307dd8e7972dfa2bf0aa659f",
-  "publishedAt": "2026-11-07T11:20:12Z"
+  "version": "v0.3.3",
+  "releaseName": "忘了没 v0.3.3 · 桌面权限引导",
+  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.3.3",
+  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.3/wanglemai-0.3.3-debug.apk",
+  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.3.3/releases/wanglemai-0.3.3-debug.apk",
+  "sha256": "56551c4767e7bea8bf99c7451bfb0df53416fc0f4b7add012d816af44437d0cd",
+  "publishedAt": "2026-11-07T12:50:42Z"
 }

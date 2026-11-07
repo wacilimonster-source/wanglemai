@@ -104,6 +104,11 @@ class FrameworkUiTest {
             find("编辑这一条")
             focusedEditor().text = "$title 已修改"
             tap("保存修改")
+            awaitEditorClosed()
+            awaitRepo {
+                container.repository.observeItems(listId, false, title).first()
+                    .any { it.title == "$title 已修改" }
+            }
             find("$title 已修改")
             device.takeScreenshot(java.io.File(context.getExternalFilesDir(null), "framework-main.png"))
             val item = container.repository.observeItems(listId, false, title).first().single()

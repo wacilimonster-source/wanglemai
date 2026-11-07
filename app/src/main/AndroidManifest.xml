@@ -34,5 +34,6 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_large_info"/>
         </receiver>
         <receiver android:name=".widget.WidgetActionReceiver" android:exported="false"/>
+        <receiver android:name=".widget.WidgetPinReceiver" android:exported="false"/>
     </application>
 </manifest>

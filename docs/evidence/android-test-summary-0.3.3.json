@@ -1,0 +1,47 @@
+{
+  "version": "v0.3.3",
+  "versionCode": 8,
+  "date": "2026-11-07",
+  "jvm": {
+    "tests": 58,
+    "failures": 0
+  },
+  "instrumentation": {
+    "device": "emulator-5554",
+    "api": 34,
+    "uniqueCasesValidated": 40,
+    "initialFullRun": {
+      "tests": 40,
+      "failed": 1,
+      "sha256": "625edf777fddb19089b796cc1a8879f5be937e4be0ce008ad0edf8447fd0c0cc",
+      "passed": 39
+    },
+    "testCorrection": "Wait for the editor to close and the edited title to persist before asserting",
+    "finalFullRun": {
+      "tests": 40,
+      "failed": 0,
+      "sha256": "56551c4767e7bea8bf99c7451bfb0df53416fc0f4b7add012d816af44437d0cd",
+      "passed": 40
+    },
+    "unresolvedFailures": 0
+  },
+  "lint": {
+    "warnings": 61,
+    "errors": 0
+  },
+  "sha256": "56551c4767e7bea8bf99c7451bfb0df53416fc0f4b7add012d816af44437d0cd",
+  "coverage": [
+    "Native launcher confirmation, cancellation and retry",
+    "Actual added instance and foreground configuration entry",
+    "Wrong token, invalid ID, old ID and wrong provider rejected",
+    "Missing callback reconciled against new host instance",
+    "Persisted pending and added states restored",
+    "Deleted host instance clears confirmation",
+    "Permission settings fallback and return without automatic retry",
+    "System desktop manual guide returns home"
+  ],
+  "pending": [
+    "Xiaomi/Redmi/POCO permission editor navigation on physical HyperOS and MIUI devices"
+  ],
+  "permissionGrantConfirmation": "User-confirmed, no hidden permission-state detection"
+}

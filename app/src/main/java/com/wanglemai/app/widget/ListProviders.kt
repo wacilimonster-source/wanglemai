@@ -20,6 +20,7 @@ open class BaseListProvider : AppWidgetProvider() {
         val pending = goAsync()
         context.app.scope.launch {
             try {
+                runCatching { context.app.container.pinning.refresh() }
                 ids.forEach { id ->
                     runCatching { context.app.container.widgets.refresh(id) }
                         .onFailure { runCatching { context.app.container.widgets.showError(id) } }

@@ -1,8 +1,5 @@
 package com.wanglemai.app.ui.settings
 
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -26,8 +23,6 @@ import com.wanglemai.app.app
 import com.wanglemai.app.data.update.ApkDownloadState
 import com.wanglemai.app.domain.*
 import com.wanglemai.app.ui.main.MainViewModel
-import com.wanglemai.app.widget.ListLargeProvider
-import com.wanglemai.app.widget.ListSmallProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -142,20 +137,7 @@ fun SettingsScreen(
             Text("小部件主题可在每个实例的配置中单独选择。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    enabled = !busy,
-                    onClick = { requestPin(context, ListSmallProvider::class.java, scope, snack) }
-                ) { Text("添加标准清单") }
-                OutlinedButton(
-                    enabled = !busy,
-                    onClick = { requestPin(context, ListLargeProvider::class.java, scope, snack) }
-                ) { Text("添加大清单") }
-            }
+            WidgetPinControls(busy, scope, snack)
             Text("也可以从系统桌面的小部件列表添加。每个实例可独立选择清单、主题和密度；写入后小部件会主动刷新。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -439,25 +421,6 @@ private fun formatBytes(bytes: Long): String = when {
     bytes >= 1024L * 1024 -> String.format(Locale.US, "%.1f MB", bytes / 1024f / 1024f)
     bytes >= 1024 -> String.format(Locale.US, "%.0f KB", bytes / 1024f)
     else -> "$bytes B"
-}
-
-private fun requestPin(
-    context: Context,
-    provider: Class<out AppWidgetProvider>,
-    scope: CoroutineScope,
-    snack: SnackbarHostState
-) {
-    val manager = AppWidgetManager.getInstance(context)
-    if (!manager.isRequestPinAppWidgetSupported) {
-        scope.launch { snack.showSnackbar("请从系统桌面的小部件入口添加") }
-        return
-    }
-    val requested = runCatching {
-        manager.requestPinAppWidget(ComponentName(context, provider), null, null)
-    }.getOrDefault(false)
-    scope.launch {
-        snack.showSnackbar(if (requested) "已请求添加到桌面" else "请从系统桌面的小部件入口添加")
-    }
 }
 
 private fun suggestedBackupName(): String {
