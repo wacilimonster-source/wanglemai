@@ -2,7 +2,7 @@ package com.wanglemai.app.domain
 
 enum class ListKind { TODO, SHOPPING }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
-enum class WidgetDensity { COMFORTABLE, COMPACT }
+enum class WidgetDensity { COMFORTABLE, COMPACT, ULTRA_COMPACT }
 
 const val DEFAULT_TODO = "list-todo-default"
 const val DEFAULT_SHOPPING = "list-shopping-default"

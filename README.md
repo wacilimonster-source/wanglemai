@@ -1,4 +1,4 @@
-# 忘了没 · Android MVP 交付 v0.3.1
+# 忘了没 · Android MVP 交付 v0.3.2
 
 日期：2026-11-07。状态：**原生 MVP 功能已实现并在 Android 14/API34 模拟器完成自动化验证**；澎湃 OS 3 真机普通桌面、API26/31/36、TalkBack 人工验收和性能目标仍未验证。已确认系统负一屏只接受小米小部件；因本项目不上架应用商店，小米小部件准入不成立，**负一屏取消开发**。
 
@@ -7,21 +7,21 @@
 - GitHub 仓库：<https://github.com/wacilimonster-source/wanglemai>
 - GitHub Releases（检查更新使用）：<https://github.com/wacilimonster-source/wanglemai/releases>
 - 原生工程：`app/`，Kotlin + Jetpack Compose/Material3 + Room + Coroutines/StateFlow。
-- Debug APK：[wanglemai-0.3.1-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.1/wanglemai-0.3.1-debug.apk)（versionCode 6，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
-- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.3.1 APK SHA256 见 SHA256SUMS。
+- Debug APK：[wanglemai-0.3.2-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.2/wanglemai-0.3.2-debug.apk)（versionCode 7，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
+- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.3.2 APK SHA256 见 SHA256SUMS。
 - 实测记录：[开发记录](docs/development-log.md)、[验收记录](docs/03-acceptance.md)、[框架状态](docs/07-framework-status.md)。
-- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.3.1.txt)、[设备测试](docs/evidence/android-instrumentation-0.3.1.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.3.1.json)。
+- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.3.2.txt)、[设备测试](docs/evidence/android-instrumentation-0.3.2.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.3.2.json)。
 
 ## 已实现的产品能力
 
-v0.3.1小部件精修与验证见 [精修规格](docs/widget-refinement/design-spec.md#10-原生实现与验证--2026-11-07) 和 [原生验证记录](docs/widget-refinement/verification-native.json)，安装包位于 `app/build/outputs/apk/debug/app-debug.apk`。
+v0.3.2小部件精修与验证见 [精修规格](docs/widget-refinement/design-spec.md#10-原生实现与验证--2026-11-07) 和 [原生验证记录](docs/widget-refinement/verification-0.3.2.json)，安装包位于 `app/build/outputs/apk/debug/app-debug.apk`。
 
 - 两种类型清单、两个不可删除的默认清单；自定义清单新建/重命名/删除，删除时把记录与草稿迁移到同类默认清单并重绑小部件。
 - 记录新增/编辑/软删除、置顶、固定排序、待买数量与单位、完成/恢复、5 秒进程内撤销、版本条件写入。
 - 最多 50 条原子批量录入，按 CRLF/LF 拆分、忽略空行、错误指出原始行号、同 commandId 重试不重复写入。
 - 字面搜索（忽略英文大小写，`%`/`_` 不作通配符）、按清单/状态过滤、清单与类型切换记忆。
 - Room 长期草稿：300ms debounce、onStop 补写、草稿恢复/丢弃、编辑冲突不静默覆盖、保存成功才清除。
-- 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与密度。支持两排桌面高度，舒适按尺寸保留底栏，紧凑把操作收进标题栏，48dp 完成触区，按空间显示最多 12 条。暖调半透明玻璃底色采用浅色奶油 92% / 深色暖棕 90%、局部顶部高光和细描边，圆角跟随系统。配置预览复用真实 RemoteViews，保留多实例独立、刷新、完成撤销和错误反馈。详见 [小部件精修规格](docs/widget-refinement/design-spec.md)。
+- 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与舒适、紧凑、超紧凑三档密度。支持两排桌面高度，舒适按尺寸保留底栏，紧凑把操作收进标题栏，舒适/紧凑48dp、超紧凑36dp完成触区，按空间显示最多 12 条。暖调半透明玻璃底色采用浅色奶油 92% / 深色暖棕 90%、局部顶部高光和细描边，圆角跟随系统。配置预览复用真实 RemoteViews，保留多实例独立、刷新、完成撤销和错误反馈。详见 [小部件精修规格](docs/widget-refinement/design-spec.md)。
 - 暖米色视觉体系（2026-11 提案 v1，见 docs/visual-refresh/）：奶油底 + 暖纸白内容面 + 焦糖棕主色，圆形完成控件、分段筛选、整宽新增入口、24dp 线性矢量图标；浅/深两套显式 token。
 - Widget 的新增/正文/标题点击直接通过 `PendingIntent.getActivity` 进入 `QuickEntryActivity`，没有 Receiver/Service 间接启动编辑页。
 - SAF JSON 导出与导入：5MB 上限、严格 schema 校验、预览数量、事务合并、同 ID 保留本机、名称冲突加“（导入N）”、失败不部分写库。
@@ -40,7 +40,7 @@ adb -s emulator-5558 install -r app\build\outputs\apk\androidTest\debug\app-debu
 adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-实际结果：JVM 58/58 通过；设备 34/34 通过（`OK (34 tests)`）。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
+实际结果：JVM 58/58 通过；设备37项用例验证通过（全量首跑36项通过，1项清单管理用例补齐异步等待后补跑通过）。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
 
 ## 发布新版本
 

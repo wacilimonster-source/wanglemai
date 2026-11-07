@@ -178,6 +178,7 @@ class FrameworkUiTest {
             tap("＋ 新建待办 清单")
             focusedEditor().text = listName
             tap("保存")
+            awaitRepo { container.repository.lists().any { it.name == listName } }
             find(listName)
             createdListId = container.repository.lists().first { it.name == listName }.id
             tap("← 返回清单")
@@ -193,6 +194,7 @@ class FrameworkUiTest {
             device.findObjects(By.text("改名")).maxBy { it.visibleBounds.centerY() }.click()
             focusedEditor().text = renamed
             tap("保存")
+            awaitRepo { container.repository.lists().any { it.id == createdListId && it.name == renamed } }
             find(renamed)
             device.findObjects(By.text("删除")).filter { it.isEnabled }
                 .maxBy { it.visibleBounds.centerY() }.click()
@@ -201,6 +203,7 @@ class FrameworkUiTest {
             awaitCondition { device.findObjects(By.text(renamed)).isEmpty() }
             tap("← 返回清单")
 
+            awaitRepo { container.repository.observeItems(DEFAULT_TODO, false, itemTitle).first().isNotEmpty() }
             val migrated = container.repository.observeItems(DEFAULT_TODO, false, itemTitle).first().single()
             assertEquals(DEFAULT_TODO, migrated.listId)
             container.repository.delete(migrated.id, migrated.version)
@@ -531,6 +534,59 @@ class FrameworkUiTest {
             }
         }
         Unit
+    }
+
+    @Test fun widgetConfigurationBackCancelAndSaveReturnHomeWithAppUnderneath() = runBlocking {
+        container.repository.initialize()
+        val userId = android.os.Process.myUid() / 100000
+        device.executeShellCommand("appwidget grantbind --package com.wanglemai.app --user $userId")
+        val homePackage = device.executeShellCommand(
+            "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME")
+            .lineSequence().last { it.contains("/") }.substringBefore("/").trim()
+        var host: ActivityScenario<WidgetHarnessActivity>? = null
+        var main: MainActivity? = null
+        var widgetId = -1
+        try {
+            host = ActivityScenario.launch(Intent(context, WidgetHarnessActivity::class.java))
+            host.onActivity { widgetId = it.widgetIds.first() }
+            container.db.dao().saveConfig(WidgetConfig(widgetId,
+                "com.wanglemai.app.widget.ListSmallProvider", DEFAULT_TODO,
+                ThemeMode.SYSTEM.name, WidgetDensity.COMPACT.name, 0))
+            for (exit in listOf("back", "cancel", "save")) {
+                context.startActivity(Intent(context, MainActivity::class.java)
+                    .putExtra("list_id", DEFAULT_TODO)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+                assertTrue(device.wait(Until.hasObject(By.pkg(context.packageName).depth(0)), 10_000))
+                find("＋ 记一条")
+                instrumentation.runOnMainSync {
+                    main = androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                        .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED)
+                        .filterIsInstance<MainActivity>().first()
+                }
+                context.startActivity(Intent(context, WidgetConfigureActivity::class.java)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                find("这张卡片，记什么？")
+                if (exit == "save") {
+                    UiScrollable(UiSelector().scrollable(true)).scrollIntoView(UiSelector().text("超紧凑"))
+                    tap("超紧凑")
+                    tap("保存并添加")
+                    awaitRepo { container.db.dao().config(widgetId)?.density == WidgetDensity.ULTRA_COMPACT.name }
+                } else if (exit == "cancel") {
+                    tap("取消")
+                } else {
+                    device.pressBack()
+                }
+                awaitCondition { device.currentPackageName == homePackage }
+                assertEquals(if (exit == "save") WidgetDensity.ULTRA_COMPACT.name else WidgetDensity.COMPACT.name,
+                    container.db.dao().config(widgetId)?.density)
+            }
+        } finally {
+            instrumentation.runOnMainSync { main?.finish() }
+            host?.close()
+            if (widgetId > 0) container.db.dao().deleteConfig(widgetId)
+            device.executeShellCommand("appwidget revokebind --package com.wanglemai.app --user $userId")
+        }
     }
 
     @Test fun widgetKeepsTitleOneRowAndAddEntryAtCurrentFontScale() = runBlocking {

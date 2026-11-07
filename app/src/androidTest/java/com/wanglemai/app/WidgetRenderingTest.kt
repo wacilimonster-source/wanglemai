@@ -56,7 +56,7 @@ class WidgetRenderingTest {
         Configuration(baseContext.resources.configuration).apply { fontScale = scale })
 
     private fun render(context: Context, size: SizeF, compact: Boolean, dark: Boolean = false): View {
-        val layout = WidgetLayout.resolve(context, size, compact)
+        val layout = WidgetLayout.resolve(context, size, if (compact) WidgetDensity.COMPACT else WidgetDensity.COMFORTABLE)
         val views = WidgetRenderer(context).render(list, rows, rows.size, null, null, dark, layout)
         val root = views.apply(context, FrameLayout(context))
         measure(context, size, root)
@@ -70,10 +70,10 @@ class WidgetRenderingTest {
         root.layout(0, 0, root.measuredWidth, root.measuredHeight)
     }
 
-    private fun assertGeometry(context: Context, root: View) {
+    private fun assertGeometry(context: Context, root: View, touchDp: Int = 48) {
         val body = root.findViewById<View>(R.id.widget_body)
         val items = root.findViewById<LinearLayout>(R.id.widget_rows)
-        val touchSize = (48 * context.resources.displayMetrics.density).roundToInt()
+        val touchSize = (touchDp * context.resources.displayMetrics.density).roundToInt()
         for (index in 0 until items.childCount) {
             val row = items.getChildAt(index)
             assertTrue("Row $index clipped below content area", row.bottom <= body.height)
@@ -95,7 +95,7 @@ class WidgetRenderingTest {
     @Test fun actualRemoteViewsFitReferenceSizesAndCapacityBoundaries() {
         instrumentation.runOnMainSync {
             val context = context()
-            val expected = mapOf(144 to (1 to 1), 163 to (1 to 1), 164 to (1 to 2),
+            val expected = mapOf(110 to (1 to 1), 144 to (1 to 1), 163 to (1 to 1), 164 to (1 to 2),
                 170 to (1 to 2), 179 to (1 to 2), 180 to (2 to 2),
                 200 to (2 to 2), 211 to (2 to 2), 212 to (2 to 3),
                 220 to (2 to 3), 231 to (2 to 3), 232 to (3 to 3),
@@ -137,7 +137,7 @@ class WidgetRenderingTest {
     @Test fun compactFeedbackReusesHeaderAndRetainsAddAndAccessibleDetails() {
         instrumentation.runOnMainSync {
             val context = context()
-            val layout = WidgetLayout.resolve(context, SizeF(180f, 170f), true)
+            val layout = WidgetLayout.resolve(context, SizeF(180f, 170f), WidgetDensity.COMPACT)
             val pending = PendingIntent.getActivity(context, 0, Intent(context, com.wanglemai.app.ui.main.MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val intents = WidgetIntents(pending, pending, pending, { pending }, { pending }, pending)
@@ -174,6 +174,46 @@ class WidgetRenderingTest {
                     image.recycle()
                 }
             }
+        }
+    }
+
+    @Test fun ultraCompactFitsMoreRowsAndScalesTextWithoutClipping() {
+        instrumentation.runOnMainSync {
+            val expected = mapOf(110 to 1, 144 to 2, 170 to 3, 180 to 3, 220 to 4, 320 to 7)
+            for (scale in listOf(1f, 1.3f, 2f)) {
+                val context = context(scale)
+                for ((height, count) in expected) {
+                    val size = SizeF(300f, height.toFloat())
+                    val layout = WidgetLayout.resolve(context, size, WidgetDensity.ULTRA_COMPACT)
+                    val root = WidgetRenderer(context).render(list, rows, rows.size, null, null, false, layout)
+                        .apply(context, FrameLayout(context))
+                    measure(context, size, root)
+                    assertGeometry(context, root, 36)
+                    assertEquals(View.GONE, root.findViewById<View>(R.id.widget_footer).visibility)
+                    if (scale == 1f) {
+                        assertEquals("Ultra H=$height", count,
+                            root.findViewById<LinearLayout>(R.id.widget_rows).childCount)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test fun providerMetadataAllowsTwoRowsOnCompactLauncherGrids() {
+        val manager = AppWidgetManager.getInstance(baseContext)
+        val providers = manager.installedProviders.filter {
+            it.provider.packageName == baseContext.packageName
+        }
+        assertEquals(2, providers.size)
+        val density = baseContext.resources.displayMetrics.density
+        for (provider in providers) {
+            assertEquals(110, (provider.minHeight / density).roundToInt())
+            assertEquals(56, (provider.minResizeHeight / density).roundToInt())
+            // A 70dp grid cell with 16dp host padding previously rounded 144dp up to 3 rows.
+            val hostPadding = android.appwidget.AppWidgetHostView.getDefaultPaddingForWidget(
+                baseContext, provider.provider, null)
+            val requestedDp = (provider.minResizeHeight + hostPadding.top + hostPadding.bottom) / density
+            assertTrue(kotlin.math.ceil(requestedDp / 70f) <= 2)
         }
     }
 

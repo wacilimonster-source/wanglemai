@@ -59,7 +59,11 @@ class WidgetRenderer(private val context: Context) {
         views.removeAllViews(R.id.widget_rows)
         visibleRows.forEach { item ->
             val row = RemoteViews(context.packageName,
-                if (layout.compact) R.layout.widget_row_compact else R.layout.widget_row)
+                when {
+                    layout.ultraCompact -> R.layout.widget_row_ultra
+                    layout.compact -> R.layout.widget_row_compact
+                    else -> R.layout.widget_row
+                })
             row.setViewPadding(R.id.row_root, 0, 0, layout.horizontalPadding, 0)
             row.setInt(R.id.row_title, "setHeight", layout.rowHeight)
             row.setTextViewText(R.id.row_title, item.title)
@@ -131,13 +135,16 @@ class WidgetRenderer(private val context: Context) {
     }
 
     private fun content(layout: WidgetLayout, dark: Boolean, palette: WidgetPalette): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.widget_content)
+        val views = RemoteViews(context.packageName,
+            if (layout.ultraCompact) R.layout.widget_content_ultra else R.layout.widget_content)
         views.setInt(android.R.id.background, "setBackgroundResource", 0)
         views.setImageViewBitmap(android.R.id.background, WidgetGlass.background(context, layout, dark))
         views.setViewPadding(R.id.widget_stack, 0, layout.verticalPadding, 0, layout.verticalPadding)
         views.setViewPadding(R.id.widget_header, layout.horizontalPadding, 0, layout.horizontalPadding, 0)
         views.setViewPadding(R.id.widget_footer, layout.horizontalPadding, 0, layout.horizontalPadding, 0)
         views.setInt(R.id.widget_title, "setHeight", layout.controlHeight)
+        views.setTextViewTextSize(R.id.widget_title, android.util.TypedValue.COMPLEX_UNIT_SP,
+            if (layout.ultraCompact) 14f else 16f)
         views.setInt(R.id.widget_add, "setHeight", layout.controlHeight)
         views.setInt(R.id.widget_more, "setHeight", layout.controlHeight)
         views.setInt(R.id.widget_gap, "setHeight", layout.contentGap)

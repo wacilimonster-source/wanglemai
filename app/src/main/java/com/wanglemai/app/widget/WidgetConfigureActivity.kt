@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -59,6 +60,13 @@ class WidgetConfigureActivity : ComponentActivity() {
         }
     }
 
+    private fun returnToDesktop() {
+        startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        finish()
+    }
+
+    @OptIn(ExperimentalLayoutApi::class)
     @Composable
     private fun ConfigureScreen(widgetId: Int, providerClass: String) {
         val container = app.container
@@ -70,6 +78,7 @@ class WidgetConfigureActivity : ComponentActivity() {
         var busy by remember { mutableStateOf(false) }
         var error by remember { mutableStateOf<String?>(null) }
         val scope = rememberCoroutineScope()
+        BackHandler { if (!busy) returnToDesktop() }
 
         LaunchedEffect(widgetId) {
             try {
@@ -114,7 +123,7 @@ class WidgetConfigureActivity : ComponentActivity() {
                     }
                     setResult(Activity.RESULT_OK,
                         Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
-                    finish()
+                    returnToDesktop()
                 } catch (_: Exception) {
                     busy = false
                     error = "配置没有保存成功，请重试"
@@ -142,7 +151,7 @@ class WidgetConfigureActivity : ComponentActivity() {
                         list = lists.firstOrNull { it.id == selectedListId }
                             ?: TaskList("preview", "清单", ListKind.TODO),
                         dark = previewDark,
-                        compact = density == WidgetDensity.COMPACT,
+                        density = density,
                         widgetId = widgetId,
                         large = providerClass == ListLargeProvider::class.java.name
                     )
@@ -185,12 +194,16 @@ class WidgetConfigureActivity : ComponentActivity() {
                     }
                     Spacer(Modifier.height(12.dp))
                     Text("显示密度", style = MaterialTheme.typography.titleMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         WidgetDensity.entries.forEach { option ->
                             FilterChip(selected = density == option, enabled = !busy,
                                 onClick = { density = option },
                                 label = {
-                                    Text(if (option == WidgetDensity.COMPACT) "紧凑" else "舒适")
+                                    Text(when (option) {
+                                        WidgetDensity.COMFORTABLE -> "舒适"
+                                        WidgetDensity.COMPACT -> "紧凑"
+                                        WidgetDensity.ULTRA_COMPACT -> "超紧凑"
+                                    })
                                 })
                         }
                     }
@@ -212,7 +225,7 @@ class WidgetConfigureActivity : ComponentActivity() {
                             shape = MaterialTheme.shapes.medium) {
                             Text(if (busy) "保存中…" else "保存并添加")
                         }
-                        TextButton(onClick = { finish() }, enabled = !busy,
+                        TextButton(onClick = { returnToDesktop() }, enabled = !busy,
                             modifier = Modifier.fillMaxWidth()) {
                             Text("取消")
                         }
@@ -228,7 +241,7 @@ class WidgetConfigureActivity : ComponentActivity() {
 private fun WidgetMaterialPreview(
     list: TaskList,
     dark: Boolean,
-    compact: Boolean,
+    density: WidgetDensity,
     widgetId: Int,
     large: Boolean
 ) {
@@ -237,8 +250,8 @@ private fun WidgetMaterialPreview(
     val sizes = WidgetSizes.forWidget(context, widgetId, large)
     val size = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
         sizes.maxBy { it.width } else sizes.minBy { it.width }
-    val layout = remember(size, compact, configuration) {
-        WidgetLayout.resolve(context, size, compact)
+    val layout = remember(size, density, configuration) {
+        WidgetLayout.resolve(context, size, density)
     }
     val samples = remember(list.id, list.kind) {
         val titles = listOf("给阳台的绿植浇水", "把周末的照片洗出来", "取回干洗的外套",

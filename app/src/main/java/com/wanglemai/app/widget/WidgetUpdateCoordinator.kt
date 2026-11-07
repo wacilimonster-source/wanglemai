@@ -93,7 +93,7 @@ class WidgetUpdateCoordinator(
         val listId = config?.listId ?: DEFAULT_TODO
         val list = dao.list(listId) ?: return renderErrorLocked(widgetId)
         val large = info.provider.className == ListLargeProvider::class.java.name
-        val compact = widgetDensityOf(config?.density) == WidgetDensity.COMPACT
+        val density = widgetDensityOf(config?.density)
         val dark = isDark(themeModeOf(config?.theme))
         val sizes = WidgetSizes.forWidget(context, widgetId, large)
         val rows = dao.widgetItems(list.id, 12)
@@ -123,7 +123,7 @@ class WidgetUpdateCoordinator(
                 undo = undo,
                 footerMessage = transientMessages[widgetId],
                 dark = dark,
-                layout = WidgetLayout.resolve(context, size, compact),
+                layout = WidgetLayout.resolve(context, size, density),
                 intents = intents
             )
         }
@@ -140,11 +140,11 @@ class WidgetUpdateCoordinator(
         val listId = config?.listId ?: DEFAULT_TODO
         val add = activity(widgetId, "create", QuickEntryActivity.createIntent(context, listId, widgetId))
         val large = info.provider.className == ListLargeProvider::class.java.name
-        val compact = widgetDensityOf(config?.density) == WidgetDensity.COMPACT
+        val density = widgetDensityOf(config?.density)
         val layouts = WidgetSizes.forWidget(context, widgetId, large).associateWith { size ->
             renderer.error(
                 dark = isDark(themeModeOf(config?.theme)),
-                layout = WidgetLayout.resolve(context, size, compact),
+                layout = WidgetLayout.resolve(context, size, density),
                 add = add,
                 retry = action(widgetId, "refresh")
             )

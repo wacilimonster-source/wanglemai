@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.os.Build
 import android.util.SizeF
 import android.util.TypedValue
+import com.wanglemai.app.domain.WidgetDensity
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -14,7 +15,7 @@ import kotlin.math.roundToInt
 data class WidgetLayout(
     val widthDp: Float,
     val heightDp: Float,
-    val compact: Boolean,
+    val density: WidgetDensity,
     val full: Boolean,
     val horizontalPadding: Int,
     val verticalPadding: Int,
@@ -26,8 +27,13 @@ data class WidgetLayout(
     val quantityWidth: Int,
     val showCount: Boolean
 ) {
+    val compact: Boolean get() = density != WidgetDensity.COMFORTABLE
+    val ultraCompact: Boolean get() = density == WidgetDensity.ULTRA_COMPACT
+
     companion object {
-        fun resolve(context: Context, size: SizeF, compact: Boolean): WidgetLayout {
+        fun resolve(context: Context, size: SizeF, density: WidgetDensity): WidgetLayout {
+            val compact = density != WidgetDensity.COMFORTABLE
+            val ultra = density == WidgetDensity.ULTRA_COMPACT
             val metrics = context.resources.displayMetrics
             fun dp(value: Int) = (value * metrics.density).roundToInt()
             fun textHeight(sp: Float): Int {
@@ -35,19 +41,29 @@ data class WidgetLayout(
                     textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, metrics)
                 }
                 val font = paint.fontMetrics
-                return ceil(font.bottom - font.top).toInt() + dp(16)
+                return ceil(font.bottom - font.top).toInt() + dp(if (ultra) 8 else 16)
             }
-            val control = maxOf(dp(48), textHeight(16f))
+            val touch = dp(if (ultra) 36 else 48)
+            val control = maxOf(touch, textHeight(if (ultra) 14f else 16f))
             // Round the repeating row down, so a fractional-density screen does not lose
             // a complete row through accumulated rounding at exact dp boundaries.
-            val row = maxOf(((if (compact) 48 else 52) * metrics.density).toInt(), textHeight(14f), dp(48))
-            val padding = dp(if (compact) 8 else 12)
+            val rowDp = when (density) {
+                WidgetDensity.COMFORTABLE -> 52
+                WidgetDensity.COMPACT -> 48
+                WidgetDensity.ULTRA_COMPACT -> 36
+            }
+            val row = maxOf((rowDp * metrics.density).toInt(), textHeight(14f), touch)
             val height = (size.height * metrics.density).roundToInt()
+            val firstRow = if (height >= control + row) row else 0
+            val headerGap = minOf(dp(if (ultra) 0 else 4),
+                (height - control - firstRow).coerceAtLeast(0))
+            val padding = minOf(dp(if (ultra) 4 else if (compact) 8 else 12),
+                ((height - control - firstRow - headerGap) / 2).coerceAtLeast(0))
             // Reintroduce the footer only when doing so cannot reduce the visible row count.
             val full = !compact && size.height >= 276 &&
                 control - dp(4) < row &&
                 height >= padding * 2 + control * 2 + row * 3
-            val gap = if (full) 0 else dp(4)
+            val gap = if (full) 0 else headerGap
             val contentHeight = (height - padding * 2 - control * (if (full) 2 else 1) - gap)
                 .coerceAtLeast(0)
             val quantityDp = when {
@@ -56,8 +72,8 @@ data class WidgetLayout(
                 compact -> 56
                 else -> 64
             }
-            return WidgetLayout(size.width, size.height, compact, full,
-                dp(if (compact) 12 else 16), padding, control, row, gap, contentHeight,
+            return WidgetLayout(size.width, size.height, density, full,
+                dp(if (ultra) 8 else if (compact) 12 else 16), padding, control, row, gap, contentHeight,
                 (contentHeight / row).coerceIn(0, 12), dp(quantityDp),
                 size.width >= 240 && context.resources.configuration.fontScale < 1.3f)
         }

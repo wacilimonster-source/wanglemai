@@ -1,0 +1,43 @@
+{
+  "version": "v0.3.2",
+  "versionCode": 7,
+  "date": "2026-11-07",
+  "jvm": {
+    "tests": 58,
+    "failures": 0
+  },
+  "instrumentation": {
+    "device": "emulator-5554",
+    "api": 34,
+    "uniqueCasesValidated": 37,
+    "initialFullRun": {
+      "tests": 37,
+      "passed": 36,
+      "failed": 1
+    },
+    "rerun": {
+      "tests": 1,
+      "passed": 1,
+      "case": "manageListsCreateRenameDeleteAndMigrate",
+      "change": "Wait for repository save and migration completion before assertions"
+    },
+    "unresolvedFailures": 0
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 61
+  },
+  "sha256": "9a1c41b59f915035c68c20dbf73f552b7c449de5307dd8e7972dfa2bf0aa659f",
+  "minimumWidgetHeightDp": 110,
+  "minimumResizeHeightDp": 56,
+  "ultraCompact": {
+    "headerDp": 36,
+    "rowDp": 36,
+    "touchDp": 36,
+    "paddingHorizontalDp": 8,
+    "paddingVerticalDp": 4
+  },
+  "pending": [
+    "HyperOS launcher cell sizing and existing-instance metadata cache on a physical device"
+  ]
+}

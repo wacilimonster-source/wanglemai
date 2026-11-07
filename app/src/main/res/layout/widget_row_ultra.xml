@@ -1,0 +1,25 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/row_root"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:gravity="center_vertical" android:orientation="horizontal">
+    <FrameLayout android:id="@+id/row_check"
+        android:layout_width="36dp" android:layout_height="36dp">
+        <ImageView android:id="@+id/row_check_icon"
+            android:layout_width="16dp" android:layout_height="16dp" android:layout_gravity="center"
+            android:src="@drawable/widget_check_ring_light" android:contentDescription="@null"
+            android:importantForAccessibility="no" />
+    </FrameLayout>
+    <TextView android:id="@+id/row_title"
+        android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1"
+        android:gravity="center_vertical" android:maxLines="1" android:ellipsize="end"
+        android:textColor="@color/widget_light_text" android:textSize="14sp" />
+    <ImageView android:id="@+id/row_pin"
+        android:layout_width="12dp" android:layout_height="12dp"
+        android:layout_marginStart="4dp" android:src="@drawable/ic_pin"
+        android:contentDescription="@null" android:importantForAccessibility="no" android:visibility="gone" />
+    <TextView android:id="@+id/row_quantity"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginStart="8dp" android:maxWidth="64dp" android:maxLines="1"
+        android:ellipsize="end" android:textColor="@color/widget_light_secondary" android:textSize="12sp"
+        android:importantForAccessibility="no" />
+</LinearLayout>
