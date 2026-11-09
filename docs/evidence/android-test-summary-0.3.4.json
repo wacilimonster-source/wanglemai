@@ -43,5 +43,18 @@
     "apk": "releases/wanglemai-0.3.4-debug.apk",
     "sha256": "4355d641bd39b54d411e98293c2d6963b62428e27963aaab6cb1d886782f95ca",
     "manifest": "update/latest.json"
+  },
+  "updateFlowEndToEnd": {
+    "testedBuild": "fixed 0.3.3 build（同一源码，临时 versionCode 8），安装后检查到 v0.3.4",
+    "checkResult": "发现新版本：v0.3.4",
+    "downloadedFile": "wanglemai-0.3.4-debug.apk",
+    "downloadedBytes": 9307888,
+    "downloadedSha256": "4355d641bd39b54d411e98293c2d6963b62428e27963aaab6cb1d886782f95ca",
+    "downloadedHashMatchesRelease": true,
+    "offlineCheckKeptInstallEntry": true,
+    "failedReDownloadKeptVerifiedApk": true,
+    "finalInstalled": "0.3.4-mvp (versionCode 9)",
+    "finalCheck": "已是最新版本：v0.3.4",
+    "githubAndMirrorAssetHashesMatch": true
   }
 }
