@@ -45,10 +45,13 @@ import com.wanglemai.app.ui.lists.ManageListsScreen
 import com.wanglemai.app.ui.settings.SettingsScreen
 import com.wanglemai.app.ui.settings.installApk
 import com.wanglemai.app.ui.theme.WanglemaiTheme
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.firstOrNull
 
 class MainActivity : ComponentActivity() {
     private val requestedList = MutableStateFlow<String?>(null)
@@ -466,14 +469,30 @@ class MainActivity : ComponentActivity() {
     private enum class MainScreen { LIST, MANAGE, SETTINGS }
 }
 
-/** Shows an in-process undo action for exactly five seconds. */
+/** Marks this app's undo prompts so only their own five-second timer can dismiss them. */
+private data class UndoVisuals(override val message: String) : SnackbarVisuals {
+    override val actionLabel: String = "撤销"
+    override val withDismissAction: Boolean = false
+    override val duration: SnackbarDuration = SnackbarDuration.Indefinite
+}
+
+/**
+ * Shows an undo prompt for five seconds of *visible* time. A newer completion replaces an
+ * older undo prompt instead of queueing behind it; unrelated snackbars keep their lifetime.
+ */
 private suspend fun SnackbarHostState.showUndo(message: String): SnackbarResult = coroutineScope {
+    currentSnackbarData?.takeIf { it.visuals is UndoVisuals }?.dismiss()
+    val visuals = UndoVisuals(message)
+    val result = async { showSnackbar(visuals) }
     val timer = launch {
+        val data = snapshotFlow { currentSnackbarData }
+            .filterNotNull()
+            .firstOrNull { it.visuals === visuals } ?: return@launch
         delay(5_000)
-        currentSnackbarData?.dismiss()
+        if (currentSnackbarData === data) data.dismiss()
     }
     try {
-        showSnackbar(message = message, actionLabel = "撤销", duration = SnackbarDuration.Indefinite)
+        result.await()
     } finally {
         timer.cancel()
     }

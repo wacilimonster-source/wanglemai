@@ -241,6 +241,43 @@ class ApkDownloaderTest {
     }
 
     @Test
+    fun failedDownloadKeepsPreviouslyVerifiedApk() {
+        val old = File(tmp.root, "wanglemai-0.2.1-debug.apk")
+        old.writeBytes(ByteArray(8) { 9 })
+        try {
+            runBlocking {
+                ApkDownloader(streamOpener = FakeOpener().opener)
+                    .download(mirrorUrl, null, null, tmp.root) { _, _, _ -> }
+            }
+            throw AssertionError("expected UpdateException")
+        } catch (e: UpdateException) {
+            assertEquals("连接失败", e.message)
+        }
+        assertTrue(old.exists())
+        assertEquals(8L, old.length())
+        assertTrue(tmp.root.listFiles()!!.none { it.name.endsWith(".part") })
+    }
+
+    @Test
+    fun verificationFailureKeepsPreviouslyVerifiedApk() {
+        val old = File(tmp.root, "wanglemai-0.2.1-debug.apk")
+        old.writeBytes(ByteArray(8) { 9 })
+        val data = ByteArray(64) { 1 }
+        try {
+            runBlocking {
+                ApkDownloader(streamOpener = FakeOpener(mirrorUrl to FakeStream(data)).opener)
+                    .download(mirrorUrl, null, sha256(ByteArray(64) { 2 }), tmp.root) { _, _, _ -> }
+            }
+            throw AssertionError("expected UpdateException")
+        } catch (e: UpdateException) {
+            assertEquals("安装包校验失败，已删除", e.message)
+        }
+        assertTrue(old.exists())
+        assertEquals(8L, old.length())
+        assertTrue(tmp.root.listFiles()!!.none { it.name.endsWith(".part") })
+    }
+
+    @Test
     fun noSourcesGivesUsableError() {
         try {
             runBlocking {

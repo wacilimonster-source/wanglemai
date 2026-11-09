@@ -89,6 +89,9 @@ object Validation {
         if (name.isEmpty() || codePoints(name) > 20) {
             throw ValidationException("名称需要 1～20 字符", field = "name")
         }
+        if (name.any { it == '\n' || it == '\r' || it == '\u2028' || it == '\u2029' || it.isISOControl() }) {
+            throw ValidationException("名称不能包含换行或控制字符", field = "name")
+        }
         return name
     }
 

@@ -13,7 +13,10 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import java.util.UUID
 
 data class DownloadedApk(
     val file: File,
@@ -82,8 +85,10 @@ class ApkDownloader(
         val fileName = url.substringBefore('?').substringAfterLast('/')
         if (!UpdateChecker.isTrustedApkAssetName(fileName)) throw UpdateException("下载文件名无效")
         targetDir.mkdirs()
-        targetDir.listFiles()?.filter { it.isFile && it.name.endsWith(".apk") }?.forEach { it.delete() }
         val target = File(targetDir, fileName)
+        // Write beside the verified package, not over it: a cancelled or failed download must
+        // leave the previously verified APK (and its install entry) intact.
+        val temp = File(targetDir, "$fileName.${UUID.randomUUID()}.part")
         val response = try {
             streamOpener(url)
         } catch (e: CancellationException) {
@@ -99,7 +104,7 @@ class ApkDownloader(
             val total = response.contentLength
             var received = 0L
             var lastReported = -1L
-            FileOutputStream(target).use { output ->
+            FileOutputStream(temp).use { output ->
                 response.stream().use { input ->
                     while (true) {
                         val read = input.read(buffer)
@@ -120,21 +125,36 @@ class ApkDownloader(
             if (expectedSha256 != null && !actual.equals(expectedSha256, ignoreCase = true)) {
                 throw UpdateException("安装包校验失败，已删除")
             }
+            replaceVerified(target, temp)
+            // Older versions are only removed after the new package is verified and in place.
+            targetDir.listFiles()?.filter {
+                it.isFile && it.name.endsWith(".apk") && it.name != target.name
+            }?.forEach { it.delete() }
             return DownloadedApk(target, expectedSha256 != null, viaAcceleratedSource)
         } catch (e: CancellationException) {
-            target.delete()
+            temp.delete()
             throw e
         } catch (e: UpdateException) {
-            target.delete()
+            temp.delete()
             throw e
         } catch (_: IOException) {
-            target.delete()
+            temp.delete()
             throw UpdateException("下载连接中断，请重试")
         } catch (_: Exception) {
-            target.delete()
+            temp.delete()
             throw UpdateException("下载失败，请重试")
         } finally {
             response.disconnect()
+        }
+    }
+
+    private fun replaceVerified(target: File, temp: File) {
+        try {
+            // Atomic on the same filesystem; replaces the old package only when the new one
+            // has been fully written and verified.
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: IOException) {
+            throw UpdateException("安装包替换失败，请重试")
         }
     }
 

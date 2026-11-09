@@ -79,4 +79,9 @@ class ValidationTest {
         }
         assertEquals("abc", Validation.listNameKey("ABC"))
     }
+    @Test fun listNameRejectsLineBreaksAndControlCharacters() {
+        for (name in listOf("工作\n清单", "工作\r清单", "工作\t清单", "工作\u0000清单", "工作\u2028清单")) {
+            assertThrows(name, ValidationException::class.java) { Validation.normalizeListName(name) }
+        }
+    }
 }

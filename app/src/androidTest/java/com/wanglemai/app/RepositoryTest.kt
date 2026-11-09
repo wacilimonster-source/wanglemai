@@ -96,6 +96,32 @@ class RepositoryTest {
         } finally { disk.close(); context.deleteDatabase(name) }
     }
 
+    @Test fun batchAcceptsLastRepresentableSortKey() = runBlocking {
+        val item = createIn(DEFAULT_TODO, "边界记录")
+        db.dao().moveItem(item.id, DEFAULT_TODO, Long.MAX_VALUE - 1024, 0)
+        val result = repo.createBatch(BatchInput(DEFAULT_TODO, "最后一条"),
+            UUID.randomUUID().toString()) as MutationResult.Success
+        assertEquals(Long.MAX_VALUE, repo.getItem(result.itemIds.single())!!.sortKey)
+    }
+
+    @Test fun batchRejectsOverflowWithoutWritingItemsOrCommand() = runBlocking {
+        val item = createIn(DEFAULT_TODO, "边界记录")
+        val command = UUID.randomUUID().toString()
+        // The first entry fits exactly. The second must reject the entire batch.
+        db.dao().moveItem(item.id, DEFAULT_TODO, Long.MAX_VALUE - 1024, 0)
+        val result = repo.createBatch(BatchInput(DEFAULT_TODO, "第一条\n第二条"), command)
+        assertTrue(result is MutationResult.ValidationError)
+        assertEquals(1, db.dao().count(DEFAULT_TODO))
+        assertNull(db.dao().command(command))
+
+        // MAX - 1023 is already unsafe for even a single entry.
+        db.dao().moveItem(item.id, DEFAULT_TODO, Long.MAX_VALUE - 1023, 0)
+        assertTrue(repo.createBatch(BatchInput(DEFAULT_TODO, "溢出记录"), command)
+            is MutationResult.ValidationError)
+        assertEquals(1, db.dao().count(DEFAULT_TODO))
+        assertNull(db.dao().command(command))
+    }
+
     @Test fun batchIsAtomicAndCommandReplayIsIdempotent() = runBlocking {
         val command = UUID.randomUUID().toString()
         val input = BatchInput(DEFAULT_TODO, " 苹果 \r\n\r\n香蕉\n", note = "周末买", pinned = true)

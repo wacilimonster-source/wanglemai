@@ -1,0 +1,47 @@
+{
+  "version": "0.3.4-mvp",
+  "versionCode": 9,
+  "commitBase": "3217b65",
+  "date": "2026-11-09",
+  "environment": {
+    "device": "emulator-5554",
+    "android": "14 / API 34",
+    "display": "1080x1920 @420dpi",
+    "avd": "pika_test"
+  },
+  "jvmTests": {
+    "total": 68,
+    "failed": 0
+  },
+  "instrumentation": {
+    "finalApkRun": {
+      "total": 43,
+      "passed": 43,
+      "failed": 0,
+      "note": "在最终 v0.3.4 debug APK 上完整重跑"
+    },
+    "earlierRun": {
+      "total": 43,
+      "passed": 39,
+      "failed": 4,
+      "note": "修复后、升版前的同一代码构建；4 个失败均由设备上残留的 Launcher AddItemActivity 前台窗口造成，清理 Launcher 状态后完整重跑 43/43 通过"
+    }
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 61
+  },
+  "manual": [
+    "深层嵌套 JSON（100090 字节/5 万层）导入被拒绝，进程存活",
+    "含换行清单名的备份被拒绝，返回具体错误",
+    "浅色编辑页状态栏图标为深色且可读",
+    "200% 字号下三个主题选项均在屏幕内",
+    "连续完成两条后最新撤销条约 5 秒后消失，且不影响其他 Snackbar",
+    "导出→导入预览回环正常"
+  ],
+  "artifacts": {
+    "apk": "releases/wanglemai-0.3.4-debug.apk",
+    "sha256": "4355d641bd39b54d411e98293c2d6963b62428e27963aaab6cb1d886782f95ca",
+    "manifest": "update/latest.json"
+  }
+}

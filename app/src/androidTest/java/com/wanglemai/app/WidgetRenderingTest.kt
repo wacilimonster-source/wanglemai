@@ -19,6 +19,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import com.wanglemai.app.data.db.WidgetConfig
 import com.wanglemai.app.debug.WidgetHarnessActivity
 import com.wanglemai.app.domain.Item
@@ -214,6 +215,35 @@ class WidgetRenderingTest {
                 baseContext, provider.provider, null)
             val requestedDp = (provider.minResizeHeight + hostPadding.top + hostPadding.bottom) / density
             assertTrue(kotlin.math.ceil(requestedDp / 70f) <= 2)
+        }
+    }
+
+    @Test fun normalRefreshClearsFeedbackAndReplacesErrorLayout() = runBlocking {
+        val container = baseContext.app.container
+        container.repository.initialize()
+        val device = UiDevice.getInstance(instrumentation)
+        val userId = android.os.Process.myUid() / 100000
+        device.executeShellCommand("appwidget grantbind --package com.wanglemai.app --user $userId")
+        var scenario: ActivityScenario<WidgetHarnessActivity>? = null
+        var widgetId = -1
+        val message = "刷新前的临时提示"
+        try {
+            scenario = ActivityScenario.launch(Intent(baseContext, WidgetHarnessActivity::class.java))
+            scenario.onActivity { widgetId = it.widgetIds.first() }
+            container.widgets.refresh(widgetId)
+            container.widgets.showMessage(widgetId, message)
+            assertTrue(device.wait(Until.hasObject(By.descContains(message)), 10_000))
+            container.widgets.refresh(widgetId)
+            assertTrue(device.wait(Until.gone(By.descContains(message)), 10_000))
+
+            container.widgets.showError(widgetId)
+            assertTrue(device.wait(Until.hasObject(By.text("暂时无法读取 · 点此重试")), 10_000))
+            container.widgets.refresh(widgetId)
+            assertTrue(device.wait(Until.gone(By.text("暂时无法读取 · 点此重试")), 10_000))
+        } finally {
+            scenario?.close()
+            device.executeShellCommand("appwidget revokebind --package com.wanglemai.app --user $userId")
+            if (widgetId > 0) container.widgets.forget(widgetId)
         }
     }
 

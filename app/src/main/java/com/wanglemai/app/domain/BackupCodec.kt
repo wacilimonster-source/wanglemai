@@ -7,6 +7,7 @@ import org.json.JSONObject
 /** Strict schema-1 backup reader/writer. Unknown fields are ignored; unknown versions/types are rejected. */
 object BackupCodec {
     private const val MAX_SAFE_INTEGER = 9007199254740991L
+    private const val MAX_JSON_DEPTH = 64
     private val UUID_PATTERN = Regex(
         "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
     )
@@ -53,9 +54,13 @@ object BackupCodec {
         if (json.toByteArray(Charsets.UTF_8).size > BACKUP_MAX_BYTES) {
             throw BackupException("备份文件超过 5MB")
         }
+        requireSafeStructure(json)
         val root = try {
             JSONObject(json)
         } catch (_: JSONException) {
+            throw BackupException("备份格式或版本不支持")
+        } catch (_: StackOverflowError) {
+            // The parser is recursive; keep a malformed file from taking down the app.
             throw BackupException("备份格式或版本不支持")
         }
         if (!root.has("schemaVersion")) throw BackupException("备份格式或版本不支持")
@@ -84,8 +89,8 @@ object BackupCodec {
             }
             val name = try {
                 Validation.normalizeListName(string(obj, "name"))
-            } catch (_: ValidationException) {
-                throw BackupException("清单字段无效或 ID 重复")
+            } catch (e: ValidationException) {
+                throw BackupException("清单字段无效：${e.message}")
             }
             val isDefault = bool(obj, "isDefault")
             val expectedDefault = when (id) {
@@ -152,6 +157,34 @@ object BackupCodec {
         id == DEFAULT_TODO || id == DEFAULT_SHOPPING || UUID_PATTERN.matches(id)
 
     fun isUuid(id: String): Boolean = UUID_PATTERN.matches(id)
+
+    /**
+     * Rejects deeply nested JSON before handing it to the recursive org.json parser.
+     * Brackets inside strings and escaped quotes do not count as nesting.
+     */
+    private fun requireSafeStructure(json: String) {
+        var depth = 0
+        var inString = false
+        var escaped = false
+        for (char in json) {
+            if (inString) {
+                when {
+                    escaped -> escaped = false
+                    char == '\\' -> escaped = true
+                    char == '"' -> inString = false
+                }
+                continue
+            }
+            when (char) {
+                '"' -> inString = true
+                '{', '[' -> {
+                    depth++
+                    if (depth > MAX_JSON_DEPTH) throw BackupException("备份格式或版本不支持")
+                }
+                '}', ']' -> if (depth > 0) depth--
+            }
+        }
+    }
 
     private fun objectAt(array: JSONArray, index: Int, message: String): JSONObject =
         array.opt(index) as? JSONObject ?: throw BackupException(message)

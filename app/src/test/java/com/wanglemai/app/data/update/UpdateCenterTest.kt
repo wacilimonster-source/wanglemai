@@ -33,6 +33,16 @@ class UpdateCenterTest {
     private fun sha256(data: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(data).joinToString("") { "%02x".format(it) }
 
+    private fun checkResult(latest: String) = com.wanglemai.app.domain.UpdateCheckResult(
+        currentVersion = "0.3.3-mvp",
+        latestVersion = latest,
+        releaseName = latest,
+        releaseUrl = "${UpdateChecker.RELEASE_PREFIX}tag/$latest",
+        apkUrl = "${UpdateChecker.RELEASE_PREFIX}download/$latest/wanglemai-0.3.4-debug.apk",
+        publishedAt = null,
+        isNewer = true
+    )
+
     private class FakeStream(private val data: ByteArray) : DownloadStream {
         override val contentLength: Long = data.size.toLong()
         override fun stream(): InputStream = ByteArrayInputStream(data)
@@ -67,13 +77,111 @@ class UpdateCenterTest {
             updatesDir = tmp.root,
             downloader = ApkDownloader(streamOpener = { FakeStream(data) })
         )
-        center.downloadApk(mirrorUrl, null, sha256(data))
+        center.downloadApk(mirrorUrl, null, sha256(data), "v0.2.2")
         val state = withTimeout(5_000) {
             center.download.first { it is ApkDownloadState.Ready }
         } as ApkDownloadState.Ready
         assertTrue(state.viaAcceleratedSource)
         assertTrue(state.sha256Verified)
+        assertEquals("v0.2.2", state.version)
         assertTrue(data.contentEquals(state.file.readBytes()))
+    }
+
+    @Test
+    fun failedReDownloadKeepsPreviousVerifiedPackage() = runBlocking {
+        val data = ByteArray(64) { 4 }
+        val attempts = AtomicInteger(0)
+        val center = UpdateCenter(
+            scope = CoroutineScope(Dispatchers.IO),
+            updatesDir = tmp.root,
+            downloader = ApkDownloader(streamOpener = {
+                if (attempts.getAndIncrement() == 0) FakeStream(data)
+                else throw UpdateException("连接失败")
+            })
+        )
+        center.downloadApk(mirrorUrl, null, sha256(data), "v0.2.2")
+        val ready = withTimeout(5_000) {
+            center.download.first { it is ApkDownloadState.Ready }
+        } as ApkDownloadState.Ready
+        assertTrue(ready.file.exists())
+
+        center.downloadApk(mirrorUrl, null, sha256(data), "v0.2.2")
+        val failed = withTimeout(5_000) {
+            center.download.first { it is ApkDownloadState.Failed }
+        } as ApkDownloadState.Failed
+        assertEquals(ready, failed.previous)
+        assertTrue(ready.file.exists())
+        assertTrue(tmp.root.listFiles()!!.none { it.name.endsWith(".part") })
+    }
+
+    @Test
+    fun cancelReDownloadRestoresPreviousReady() = runBlocking {
+        val data = ByteArray(64) { 5 }
+        val started = CountDownLatch(1)
+        val release = CompletableFuture<Unit>()
+        val attempts = AtomicInteger(0)
+        val center = UpdateCenter(
+            scope = CoroutineScope(Dispatchers.IO),
+            updatesDir = tmp.root,
+            downloader = ApkDownloader(streamOpener = {
+                if (attempts.getAndIncrement() == 0) FakeStream(data)
+                else BlockingStream(started, release)
+            })
+        )
+        center.downloadApk(mirrorUrl, null, sha256(data), "v0.2.2")
+        val ready = withTimeout(5_000) {
+            center.download.first { it is ApkDownloadState.Ready }
+        } as ApkDownloadState.Ready
+
+        center.downloadApk(mirrorUrl, null, sha256(data), "v0.2.2")
+        assertTrue(started.await(2, TimeUnit.SECONDS))
+        center.cancelDownload()
+        release.complete(Unit)
+        val restored = withTimeout(5_000) {
+            center.download.first { it is ApkDownloadState.Ready }
+        } as ApkDownloadState.Ready
+        assertEquals(ready, restored)
+        assertTrue(restored.file.exists())
+    }
+
+    @Test
+    fun checkDiscardsPackageFromAnotherVersion() = runBlocking {
+        val data = ByteArray(64) { 6 }
+        val center = UpdateCenter(
+            scope = CoroutineScope(Dispatchers.IO),
+            updatesDir = tmp.root,
+            downloader = ApkDownloader(streamOpener = { FakeStream(data) }),
+            checkLatest = { checkResult("v0.2.3") }
+        )
+        center.downloadApk(mirrorUrl, null, sha256(data), "v0.2.2")
+        val ready = withTimeout(5_000) {
+            center.download.first { it is ApkDownloadState.Ready }
+        } as ApkDownloadState.Ready
+
+        center.check("0.2.2")
+        withTimeout(5_000) { center.result.first { it != null } }
+        assertEquals(ApkDownloadState.Idle, center.download.value)
+        assertFalse(ready.file.exists())
+    }
+
+    @Test
+    fun failedCheckKeepsReadyPackageAvailable() = runBlocking {
+        val data = ByteArray(64) { 7 }
+        val center = UpdateCenter(
+            scope = CoroutineScope(Dispatchers.IO),
+            updatesDir = tmp.root,
+            downloader = ApkDownloader(streamOpener = { FakeStream(data) }),
+            checkLatest = { throw UpdateException("网络连接失败") }
+        )
+        center.downloadApk(mirrorUrl, null, sha256(data), "v0.2.2")
+        val ready = withTimeout(5_000) {
+            center.download.first { it is ApkDownloadState.Ready }
+        } as ApkDownloadState.Ready
+
+        center.check("0.2.2")
+        withTimeout(5_000) { center.checkError.first { it != null } }
+        assertEquals(ready, center.download.value)
+        assertTrue(ready.file.exists())
     }
 
     @Test

@@ -33,6 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     vm: MainViewModel,
@@ -115,13 +116,18 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         SettingsGroup("外观与桌面") {
-            Row(
+            Column(
                 Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.Center
             ) {
                 Text("应用主题", style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.width(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(Modifier.height(8.dp))
+                // FlowRow keeps all three options reachable at 200% font scale instead of
+                // letting the last chip be pushed off-screen.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     ThemeMode.entries.forEach { mode ->
                         FilterChip(selected = theme == mode, onClick = { vm.setTheme(mode) },
                             label = {
@@ -208,41 +214,44 @@ fun SettingsScreen(
                     onClick = { updateCenter.check(currentVersion) }
                 ) { Text(if (updateBusy) "检查中…" else "检查更新") }
             }
-        updateError?.let {
-            Spacer(Modifier.height(6.dp))
-            Text(it, color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-        }
-        updateResult?.let { result ->
-            Spacer(Modifier.height(8.dp))
-            Text(
-                if (result.isNewer) "发现新版本：${result.latestVersion}"
-                else "已是最新版本：${result.latestVersion}",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-            )
-            if (result.viaAcceleratedSource) {
-                Text("已通过国内加速清单检查", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            updateError?.let {
+                Spacer(Modifier.height(6.dp))
+                Text(it, color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
-            if (result.isNewer) {
-                result.sha256?.let {
-                    Text("SHA256：$it", style = MaterialTheme.typography.bodySmall,
+            val result = updateResult
+            val state = downloadState
+            val hasApkSource = result?.let { it.apkMirrorUrl != null || it.apkUrl != null } == true
+            result?.let { checked ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (checked.isNewer) "发现新版本：${checked.latestVersion}"
+                    else "已是最新版本：${checked.latestVersion}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                )
+                if (checked.viaAcceleratedSource) {
+                    Text("已通过国内加速清单检查", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text("下载优先走国内加速（jsDelivr），失败自动改用 GitHub；下载完成后自动校验 SHA256。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (checked.isNewer) {
+                    checked.sha256?.let {
+                        Text("SHA256：$it", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("下载优先走国内加速（jsDelivr），失败自动改用 GitHub；下载完成后自动校验 SHA256。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (!hasApkSource) {
+                        Text("该版本未找到 APK 附件，请到发布页手动下载",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
-            val hasApkSource = result.apkMirrorUrl != null || result.apkUrl != null
-            if (result.isNewer && !hasApkSource) {
-                Text("该版本未找到 APK 附件，请到发布页手动下载",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            val state = downloadState
             when (state) {
                 is ApkDownloadState.Downloading -> {
+                    Spacer(Modifier.height(8.dp))
                     if (state.total > 0) {
                         LinearProgressIndicator(
                             progress = { (state.received.toFloat() / state.total).coerceIn(0f, 1f) },
@@ -258,33 +267,47 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        when {
-                            state.viaAcceleratedSource -> "正在通过国内加速源下载"
-                            result.apkMirrorUrl != null -> "加速源不可用，已改用 GitHub 重新下载"
-                            else -> "正在从 GitHub 下载"
-                        },
+                        if (state.viaAcceleratedSource) "正在通过国内加速源下载"
+                        else "正在从 GitHub 下载",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 is ApkDownloadState.Failed -> {
+                    Spacer(Modifier.height(8.dp))
                     Text(state.message, color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                }
-                is ApkDownloadState.Ready -> {
-                    Text(
-                        if (state.sha256Verified) "安装包已下载并通过 SHA256 校验"
-                        else "安装包已下载（此版本未提供 SHA256，跳过校验）",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-                    )
-                    if (state.viaAcceleratedSource) {
-                        Text("已通过国内加速源下载", style = MaterialTheme.typography.bodySmall,
+                    state.previous?.takeIf { it.matches(result) }?.let { previous ->
+                        Text("${previous.previousLabel()}仍可安装。",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                ApkDownloadState.Idle -> {}
+                is ApkDownloadState.Ready -> {
+                    Spacer(Modifier.height(8.dp))
+                    if (state.matches(result)) {
+                        Text(
+                            state.versionPrefix() + if (state.sha256Verified)
+                                "安装包已下载并通过 SHA256 校验"
+                            else "安装包已下载（此版本未提供 SHA256，跳过校验）",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                        )
+                        if (state.viaAcceleratedSource) {
+                            Text("已通过国内加速源下载", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        Text(
+                            "已下载的安装包对应 ${state.version}，与当前最新版本 " +
+                                "${result?.latestVersion.orEmpty()} 不一致，请重新下载。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                ApkDownloadState.Idle -> Unit
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (state) {
@@ -292,33 +315,52 @@ fun SettingsScreen(
                         OutlinedButton(onClick = { updateCenter.cancelDownload() }) { Text("取消下载") }
                     }
                     is ApkDownloadState.Failed -> {
-                        if (result.isNewer && hasApkSource) {
+                        state.previous?.takeIf { it.matches(result) }?.let { previous ->
+                            Button(onClick = { installApk(context, previous.file, scope, snack) }) {
+                                Text("安装已下载版本")
+                            }
+                        }
+                        if (result != null && result.isNewer && hasApkSource) {
                             Button(onClick = {
-                                updateCenter.downloadApk(result.apkMirrorUrl, result.apkUrl, result.sha256)
+                                updateCenter.downloadApk(
+                                    result.apkMirrorUrl, result.apkUrl, result.sha256,
+                                    result.latestVersion
+                                )
                             }) { Text("重新下载") }
                         }
                     }
                     is ApkDownloadState.Ready -> {
-                        Button(onClick = { installApk(context, state.file, scope, snack) }) {
-                            Text("安装")
+                        if (state.matches(result)) {
+                            Button(onClick = { installApk(context, state.file, scope, snack) }) {
+                                Text("安装")
+                            }
                         }
-                        TextButton(onClick = {
-                            updateCenter.downloadApk(result.apkMirrorUrl, result.apkUrl, result.sha256)
-                        }) { Text("重新下载") }
+                        if (result != null && hasApkSource) {
+                            TextButton(onClick = {
+                                updateCenter.downloadApk(
+                                    result.apkMirrorUrl, result.apkUrl, result.sha256,
+                                    result.latestVersion
+                                )
+                            }) { Text("重新下载") }
+                        }
                     }
                     ApkDownloadState.Idle -> {
-                        if (result.isNewer && hasApkSource) {
+                        if (result != null && result.isNewer && hasApkSource) {
                             Button(onClick = {
-                                updateCenter.downloadApk(result.apkMirrorUrl, result.apkUrl, result.sha256)
+                                updateCenter.downloadApk(
+                                    result.apkMirrorUrl, result.apkUrl, result.sha256,
+                                    result.latestVersion
+                                )
                             }) { Text("下载安装包") }
                         }
                     }
                 }
-                TextButton(onClick = { openUrl(context, result.releaseUrl, scope, snack) }) {
-                    Text("打开发布页")
+                result?.let { checked ->
+                    TextButton(onClick = { openUrl(context, checked.releaseUrl, scope, snack) }) {
+                        Text("打开发布页")
+                    }
                 }
             }
-        }
 
             Text("忘了没 $currentVersion", style = MaterialTheme.typography.bodyMedium)
             Text("本地优先，无登录、无云同步、无网络后台服务；仅在你手动检查更新和下载时联网，安装始终由你确认。卸载或清除应用数据会删除本机记录，请定期导出备份。",
@@ -406,6 +448,16 @@ private fun packageVersionName(context: Context): String {
     return context.packageManager.getPackageInfo(context.packageName, 0).versionName
         ?: "未知版本"
 }
+
+/** A downloaded package may only be offered when it belongs to the current check result. */
+private fun ApkDownloadState.Ready.matches(result: UpdateCheckResult?): Boolean =
+    result == null || version.isEmpty() || version == result.latestVersion
+
+private fun ApkDownloadState.Ready.versionPrefix(): String =
+    if (version.isEmpty()) "" else "$version "
+
+private fun ApkDownloadState.Ready.previousLabel(): String =
+    if (version.isEmpty()) "之前下载的安装包" else "之前下载的 $version 安装包"
 
 private fun openUrl(context: Context, url: String?, scope: CoroutineScope, snack: SnackbarHostState) {
     if (url.isNullOrBlank()) return

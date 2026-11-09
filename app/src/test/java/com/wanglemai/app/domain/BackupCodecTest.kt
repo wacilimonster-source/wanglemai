@@ -128,6 +128,32 @@ class BackupCodecTest {
         assertThrows(BackupException::class.java) { BackupCodec.decode(BackupCodec.encode(bad)) }
     }
 
+    @Test fun listNameCannotContainLineBreaks() {
+        val bad = document(lists = listOf(
+            BackupList(DEFAULT_TODO, ListKind.TODO, "随手待办", true, now, now),
+            BackupList(DEFAULT_SHOPPING, ListKind.SHOPPING, "日常采购", true, now, now),
+            list(name = "第一行\n第二行")
+        ), items = emptyList())
+        assertThrows(BackupException::class.java) { BackupCodec.decode(BackupCodec.encode(bad)) }
+    }
+
+    @Test fun deeplyNestedJsonIsRejectedBeforeRecursiveParsing() {
+        val depth = 5_000
+        val json = buildString {
+            append("{\"schemaVersion\":1,\"app\":\"" + BACKUP_APP_ID + "\",\"exportedAt\":1,")
+            append("\"lists\":[],\"items\":[],\"junk\":")
+            repeat(depth) { append('[') }
+            repeat(depth) { append(']') }
+            append('}')
+        }
+        assertThrows(BackupException::class.java) { BackupCodec.decode(json) }
+    }
+
+    @Test fun bracketsInsideStringsDoNotCountAsNesting() {
+        val json = JSONObject(BackupCodec.encode(document())).put("future", "[[[[{{{")
+        assertEquals(1, BackupCodec.decode(json.toString()).items.size)
+    }
+
     @Test fun oversizedFileIsRejectedBeforeParsing() {
         assertThrows(BackupException::class.java) {
             BackupCodec.decode("x".repeat(BACKUP_MAX_BYTES + 1))

@@ -34,7 +34,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -86,17 +85,15 @@ class QuickEntryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            isAppearanceLightNavigationBars = false
-        }
         onBackPressedDispatcher.addCallback(this) {
             if (editorVm.state.value.busy) return@addCallback
             if (isImeVisible()) hideIme() else closeEditor()
         }
         setContent {
             val state by editorVm.state.collectAsStateWithLifecycle()
-            WanglemaiTheme(state.theme, syncSystemBars = false) {
+            // Let the theme own system-bar icon contrast: the sheet is light in light mode,
+            // so the previous unconditional white icons were unreadable.
+            WanglemaiTheme(state.theme) {
                 EditorSheet(state, editorVm, onClose = ::closeEditor, onFinish = ::finish)
             }
         }
