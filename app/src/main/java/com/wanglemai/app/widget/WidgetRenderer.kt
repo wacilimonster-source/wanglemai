@@ -37,7 +37,8 @@ class WidgetRenderer(private val context: Context) {
         footerMessage: String?,
         dark: Boolean,
         layout: WidgetLayout,
-        intents: WidgetIntents? = null
+        intents: WidgetIntents? = null,
+        completedCount: Int = 0
     ): RemoteViews {
         val palette = palette(dark)
         val views = content(layout, dark, palette)
@@ -53,8 +54,14 @@ class WidgetRenderer(private val context: Context) {
         views.setContentDescription(R.id.widget_header_add, addLabel)
 
         val visibleRows = rows.take(layout.capacity)
-        showEmpty(views, layout, visibleRows.isEmpty(),
-            if (totalActive > 0) "空间较小 · 打开查看全部" else "清单空空，想到就记")
+        val emptyText = when {
+            totalActive > 0 -> "空间较小 · 打开查看全部"
+            completedCount > 0 && list.kind == ListKind.SHOPPING -> "都买齐了 · 再记一条"
+            completedCount > 0 -> "都完成了 · 再记一条"
+            list.kind == ListKind.SHOPPING -> "还没要买的，记一条"
+            else -> "清单空空，想到就记"
+        }
+        showEmpty(views, layout, visibleRows.isEmpty(), emptyText)
         bind(views, R.id.widget_empty, intents?.openList)
         views.removeAllViews(R.id.widget_rows)
         visibleRows.forEach { item ->

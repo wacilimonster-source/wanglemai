@@ -43,7 +43,9 @@ interface AppDao {
     @Query("SELECT * FROM items WHERE listId=:listId AND deletedAt IS NULL AND completed=0 ORDER BY pinned DESC,sortKey,createdAt,id LIMIT :limit")
     suspend fun widgetItems(listId: String, limit: Int): List<ItemEntity>
     @Query("SELECT COUNT(*) FROM items WHERE listId=:listId AND completed=0 AND deletedAt IS NULL") suspend fun count(listId: String): Int
+    @Query("SELECT COUNT(*) FROM items WHERE listId=:listId AND completed=1 AND deletedAt IS NULL") suspend fun countCompleted(listId: String): Int
     @Query("SELECT COUNT(*) FROM items WHERE listId=:listId AND completed=0 AND deletedAt IS NULL") fun observeActiveCount(listId: String): Flow<Int>
+    @Query("SELECT COUNT(*) FROM items WHERE listId=:listId AND completed=1 AND deletedAt IS NULL") fun observeCompletedCount(listId: String): Flow<Int>
     @Query("SELECT listId, COUNT(*) AS count FROM items WHERE deletedAt IS NULL GROUP BY listId") fun observeListCounts(): Flow<List<ListCountRow>>
     @Query("SELECT COUNT(*) FROM items WHERE listId=:listId AND deletedAt IS NULL") suspend fun itemCount(listId: String): Int
 

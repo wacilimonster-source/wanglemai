@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wanglemai.app.R
 import com.wanglemai.app.app
@@ -48,6 +49,7 @@ import com.wanglemai.app.ui.theme.WanglemaiTheme
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -73,6 +75,14 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         requestedList.value = intent.getStringExtra("list_id")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // A launcher can keep a stale frame after the process was backgrounded; repaint on return.
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { app.container.widgets.refreshAll() }
+        }
     }
 
     @Composable
@@ -182,11 +192,25 @@ class MainActivity : ComponentActivity() {
         val loading by vm.loading.collectAsStateWithLifecycle()
         val error by vm.error.collectAsStateWithLifecycle()
         val activeCount by vm.activeCount.collectAsStateWithLifecycle()
+        val completedCount by vm.completedCount.collectAsStateWithLifecycle()
         val context = LocalContext.current
         val shopping = kind == ListKind.SHOPPING
         val doneWord = if (shopping) "购买" else "完成"
         val currentList = lists.firstOrNull { it.id == listId }
         val listsOfKind = lists.filter { it.kind == kind }
+        val headerCopy = when {
+            activeCount > 0 -> if (shopping) "$activeCount 样东西，等你买" else "$activeCount 件小事，等你完成"
+            completedCount > 0 -> if (shopping) "都买齐了，心里轻轻。" else "都完成了，心里轻轻。"
+            shopping -> "还没要买的，记一条。"
+            else -> "清单空空，心里轻轻。"
+        }
+        val filterCount = if (completed) completedCount else activeCount
+        val filterCountCopy = when {
+            completed && shopping -> "$filterCount 件已买"
+            completed -> "$filterCount 项已完成"
+            shopping -> "$filterCount 件待买"
+            else -> "$filterCount 项待办"
+        }
         var pickerOpen by remember { mutableStateOf(false) }
         val busyItems = remember { mutableStateOf<Set<String>>(emptySet()) }
 
@@ -218,7 +242,7 @@ class MainActivity : ComponentActivity() {
                 TextButton(onClick = onManage) { Text("管理清单") }
             }
             Text(
-                if (activeCount > 0) "${activeCount} 件小事，等你完成" else "清单空空，心里轻轻。",
+                headerCopy,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -282,7 +306,7 @@ class MainActivity : ComponentActivity() {
                 }
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    if (shopping) "$activeCount 件待买" else "$activeCount 项待办",
+                    filterCountCopy,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -308,6 +332,9 @@ class MainActivity : ComponentActivity() {
                             when {
                                 query.isNotEmpty() -> "没有找到相关记录"
                                 completed -> "这里还没有已${doneWord}的记录"
+                                activeCount == 0 && completedCount > 0 ->
+                                    if (shopping) "都买齐了，点下方再记一条。" else "都完成了，点下方再记一条。"
+                                shopping -> "还没要买的，点下方记一条。"
                                 else -> "还没有记录，点下方记一条。"
                             },
                             Modifier.fillMaxWidth().padding(vertical = 32.dp),

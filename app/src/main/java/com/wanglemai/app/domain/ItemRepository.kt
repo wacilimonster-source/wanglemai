@@ -6,6 +6,7 @@ interface ItemRepository {
     fun observeLists(): Flow<List<TaskList>>
     fun observeListCounts(): Flow<Map<String, Int>>
     fun observeActiveCount(listId: String): Flow<Int>
+    fun observeCompletedCount(listId: String): Flow<Int>
     fun observeItems(listId: String, completed: Boolean, search: String): Flow<List<Item>>
     suspend fun initialize()
     suspend fun lists(): List<TaskList>

@@ -1,5 +1,27 @@
 # Android 开发与交接记录
 
+## v0.3.5 · 闭环状态与桌面刷新 / 2026-11-10
+
+本版不新增功能模块，只修正闭环状态反馈与刷新可靠性：
+
+- **全部完成/空清单**：新增 `completedCount` 查询并传入 `WidgetRenderer` 与主页面。待办 0 条未完成且有已完成记录时显示“都完成了”，待买显示“都买齐了”；真正没有记录才显示“清单空空/还没要买的”。小部件空态仍保留“再记一条”入口。
+- **待买文案**：主页面标题下改为“N 样东西，等你买”，筛选计数改为“N 件待买 / N 件已买”，空态改为“还没要买的 / 都买齐了”，不再与待办共用“小事/完成”。
+- **已完成计数**：筛选行右侧计数改为当前筛选的数量；已完成/已购买页不再显示未完成数。
+- **编辑页键盘**：`QuickEntryActivity` 编辑模式只聚焦标题，不主动弹键盘；新增和“保存并继续”仍自动弹键盘。Manifest 的 `windowSoftInputMode` 由 `stateAlwaysVisible` 改为 `stateHidden`，避免系统强制弹键盘。
+- **桌面刷新**：新增 `WidgetRefreshReceiver` 监听 `BOOT_COMPLETED` 与 `MY_PACKAGE_REPLACED`，启动后 `refreshAll()`；`MainActivity.onResume` 也补一次刷新。保留数据变更后的即时刷新。
+- **选择器预览**：标准/大号分别使用 `widget_preview_small.xml` / `widget_preview_large.xml` 静态示例，并补充 `previewImage`；旧桌面不再显示空卡片。
+
+### 实际结果
+
+| 检查 | 结果 |
+|---|---|
+| JVM 单元测试 | 68/68 通过 |
+| 仪器测试 | 46/46 通过（API34 / pika_test；新增全完成/空清单文案、completedCount、IME、预览元数据用例） |
+| Lint | 0 error / 61 warning |
+| 手工验证 | 待买与已完成计数、全部完成文案、编辑页不弹键盘/点击后弹出、选择器示例预览、模拟器重启与 `install -r` 后小部件恢复均通过 |
+
+首轮完整仪器测试中 `appCanCreateEditAndPersistRecord` 一次未在 10 秒内定位新记录；单例重跑与完整重跑均通过，记录为偶发 UI 时序问题，不将首轮标为全绿。证据见 `docs/evidence/android-build-0.3.5.txt`、`android-instrumentation-0.3.5.txt`、`android-test-summary-0.3.5.json`。
+
 ## v0.3.2 · 两排尺寸、超紧凑与配置返回 / 2026-11-07
 
 标准和大清单的传统最小高度统一110dp，纵向缩放下限由144dp降为56dp。新增ULTRA_COMPACT，标题与事项行36dp，左右8dp、上下4dp，正文14sp。窄高空间自动减少内边距以容纳完整事项。配置页返回、取消及保存成功后显式打开系统桌面，忙于保存时阻止重复退出。

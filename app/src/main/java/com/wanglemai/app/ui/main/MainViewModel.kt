@@ -48,6 +48,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repo.observeActiveCount(id).catch { emit(0) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val completedCount = listId.flatMapLatest { id ->
+        repo.observeCompletedCount(id).catch { emit(0) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     init {
         viewModelScope.launch {
             listId.drop(1).distinctUntilChanged().collect {

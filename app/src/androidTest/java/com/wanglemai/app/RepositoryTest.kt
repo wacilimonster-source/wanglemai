@@ -78,6 +78,18 @@ class RepositoryTest {
         create("100%_完成"); create("普通记录")
         assertEquals(1, repo.observeItems(DEFAULT_SHOPPING, false, "%_").first().size)
     }
+    @Test fun completedCountTracksCompletedItemsAndExcludesDeleted() = runBlocking {
+        val item = create("牛奶")
+        create("面包")
+        assertEquals(0, repo.observeCompletedCount(DEFAULT_SHOPPING).first())
+        assertTrue(repo.setCompleted(item.id, item.version, true) is MutationResult.Success)
+        assertEquals(1, repo.observeCompletedCount(DEFAULT_SHOPPING).first())
+        assertEquals(1, db.dao().countCompleted(DEFAULT_SHOPPING))
+        val completed = repo.getItem(item.id)!!
+        assertTrue(repo.delete(completed.id, completed.version) is MutationResult.Success)
+        assertEquals(0, repo.observeCompletedCount(DEFAULT_SHOPPING).first())
+        assertEquals(0, db.dao().countCompleted(DEFAULT_SHOPPING))
+    }
     @Test fun deletionIsSoftAndCannotBeEdited() = runBlocking {
         val item = create(); assertTrue(repo.delete(item.id, item.version) is MutationResult.Success)
         assertNull(repo.getItem(item.id)); assertEquals(0, db.dao().count(DEFAULT_SHOPPING))

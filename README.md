@@ -1,16 +1,23 @@
-# 忘了没 · Android MVP 交付 v0.3.2
+# 忘了没 · Android MVP 交付 v0.3.5
 
-日期：2026-11-07。状态：**原生 MVP 功能已实现并在 Android 14/API34 模拟器完成自动化验证**；澎湃 OS 3 真机普通桌面、API26/31/36、TalkBack 人工验收和性能目标仍未验证。已确认系统负一屏只接受小米小部件；因本项目不上架应用商店，小米小部件准入不成立，**负一屏取消开发**。
+日期：2026-11-10。状态：**原生 MVP 功能已实现并在 Android 14/API34 模拟器完成自动化验证**；模拟器 Launcher 已验证重启和覆盖安装后小部件恢复。澎湃 OS 3 真机普通桌面、API26/31/36、TalkBack 人工验收和性能目标仍未验证。已确认系统负一屏只接受小米小部件；因本项目不上架应用商店，小米小部件准入不成立，**负一屏取消开发**。
 
 ## 当前交付
 
 - GitHub 仓库：<https://github.com/wacilimonster-source/wanglemai>
 - GitHub Releases（检查更新使用）：<https://github.com/wacilimonster-source/wanglemai/releases>
 - 原生工程：`app/`，Kotlin + Jetpack Compose/Material3 + Room + Coroutines/StateFlow。
-- Debug APK：[wanglemai-0.3.2-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.2/wanglemai-0.3.2-debug.apk)（versionCode 7，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
-- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.3.2 APK SHA256 见 SHA256SUMS。
+- Debug APK：[wanglemai-0.3.5-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.5/wanglemai-0.3.5-debug.apk)（versionCode 10，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
+- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.3.5 APK SHA256 见 SHA256SUMS。
 - 实测记录：[开发记录](docs/development-log.md)、[验收记录](docs/03-acceptance.md)、[框架状态](docs/07-framework-status.md)。
-- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.3.2.txt)、[设备测试](docs/evidence/android-instrumentation-0.3.2.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.3.2.json)。
+- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.3.5.txt)、[设备测试](docs/evidence/android-instrumentation-0.3.5.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.3.5.json)。
+
+## 本版改进（v0.3.5）
+
+- 小部件和主页面区分“全部完成”与“空清单”；待买使用独立文案与筛选计数。
+- 编辑已有记录不再自动弹出键盘；新增记录和“保存并继续”保持自动聚焦。
+- 开机、覆盖安装、回到 App 时刷新小部件；选择器改用带示例记录的静态预览。
+- 不改数据模型；现有数据、草稿、清单绑定和小部件配置保持兼容。
 
 ## 已实现的产品能力
 
@@ -21,7 +28,7 @@ v0.3.2小部件精修与验证见 [精修规格](docs/widget-refinement/design-s
 - 最多 50 条原子批量录入，按 CRLF/LF 拆分、忽略空行、错误指出原始行号、同 commandId 重试不重复写入。
 - 字面搜索（忽略英文大小写，`%`/`_` 不作通配符）、按清单/状态过滤、清单与类型切换记忆。
 - Room 长期草稿：300ms debounce、onStop 补写、草稿恢复/丢弃、编辑冲突不静默覆盖、保存成功才清除。
-- 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与舒适、紧凑、超紧凑三档密度。支持两排桌面高度，舒适按尺寸保留底栏，紧凑把操作收进标题栏，舒适/紧凑48dp、超紧凑36dp完成触区，按空间显示最多 12 条。暖调半透明玻璃底色采用浅色奶油 92% / 深色暖棕 90%、局部顶部高光和细描边，圆角跟随系统。配置预览复用真实 RemoteViews，保留多实例独立、刷新、完成撤销和错误反馈。详见 [小部件精修规格](docs/widget-refinement/design-spec.md)。
+- 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与舒适、紧凑、超紧凑三档密度。支持两排桌面高度，舒适按尺寸保留底栏，紧凑把操作收进标题栏，舒适/紧凑48dp、超紧凑36dp完成触区，按空间显示最多 12 条。暖调半透明玻璃底色采用浅色奶油 92% / 深色暖棕 90%、局部顶部高光和细描边，圆角跟随系统。配置预览复用真实 RemoteViews，保留多实例独立、刷新、完成撤销和错误反馈；空态区分“全部完成”与“空清单”，选择器使用带示例记录的静态预览，开机/覆盖安装/回到 App 时主动刷新。详见 [小部件精修规格](docs/widget-refinement/design-spec.md)。
 - 暖米色视觉体系（2026-11 提案 v1，见 docs/visual-refresh/）：奶油底 + 暖纸白内容面 + 焦糖棕主色，圆形完成控件、分段筛选、整宽新增入口、24dp 线性矢量图标；浅/深两套显式 token。
 - Widget 的新增/正文/标题点击直接通过 `PendingIntent.getActivity` 进入 `QuickEntryActivity`，没有 Receiver/Service 间接启动编辑页。
 - SAF JSON 导出与导入：5MB 上限、严格 schema 校验、预览数量、事务合并、同 ID 保留本机、名称冲突加“（导入N）”、失败不部分写库。
@@ -35,12 +42,12 @@ v0.3.2小部件精修与验证见 [精修规格](docs/widget-refinement/design-s
 .\gradlew.bat :app:assembleDebugAndroidTest
 
 # 本机已明确选定的模拟器；不要向所有已连接设备批量安装
-adb -s emulator-5558 install -r app\build\outputs\apk\debug\app-debug.apk
-adb -s emulator-5558 install -r app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk
-adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.test.runner.AndroidJUnitRunner
+adb -s emulator-5554 install -r app\build\outputs\apk\debug\app-debug.apk
+adb -s emulator-5554 install -r app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk
+adb -s emulator-5554 shell am instrument -w -r com.wanglemai.app.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-实际结果：JVM 58/58 通过；设备37项用例验证通过（全量首跑36项通过，1项清单管理用例补齐异步等待后补跑通过）。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
+实际结果：JVM 68/68 通过；设备 46/46 完整重跑通过。首轮曾出现一次 `appCanCreateEditAndPersistRecord` 未在 10 秒内定位新记录的偶发失败，单例重跑与完整重跑均通过；不以首轮结果冒充全绿。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
 
 ## 发布新版本
 
@@ -88,7 +95,7 @@ adb -s emulator-5558 shell am instrument -w -r com.wanglemai.app.test/androidx.t
 - `INTERNET` 权限仅用于用户手动检查更新和下载安装包；`REQUEST_INSTALL_PACKAGES` 仅用于调起系统安装器（首次安装更新会引导开启“安装未知应用”）；没有账号、云同步或后台网络任务，安装始终由用户在系统弹窗确认。
 - 只验证 Android 14/API34 模拟器；API26、API31、API36 运行未执行。
 - TalkBack 只做了语义与触控目标实现检查，未做完整人工验收；性能 P95 未测量。
-- 系统重启只验证了 App 数据恢复；真实桌面小部件实例在重启/APK 升级后的恢复未在系统 Launcher 上验证。
+- 系统重启和覆盖安装后的小部件恢复已在 Android 14 模拟器（pika_test / AOSP Launcher）验证；HyperOS 3 真机 Launcher 仍未验证。
 - 数据库写满/存储失败未做故障注入；输入保留与重试由实现保证但未专门测试。
 - 草稿 onStop 写盘不能保证突然断电前最后 300ms 的输入。
 - jsDelivr 国内 CDN 的可用性不保证；客户端内下载失败会自动改用 GitHub，公开分发的 debug 签名不应作为安全更新身份。

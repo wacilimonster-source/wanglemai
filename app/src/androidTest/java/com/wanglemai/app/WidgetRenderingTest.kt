@@ -135,6 +135,27 @@ class WidgetRenderingTest {
         }
     }
 
+    @Test fun allDoneAndEmptyStatesUseDistinctCopy() {
+        instrumentation.runOnMainSync {
+            val context = context()
+            val layout = WidgetLayout.resolve(context, SizeF(320f, 320f), WidgetDensity.COMFORTABLE)
+            val renderer = WidgetRenderer(context)
+            fun emptyText(target: TaskList, completed: Int): String {
+                val views = renderer.render(target, emptyList(), 0, null, null, false, layout,
+                    completedCount = completed)
+                val root = views.apply(context, FrameLayout(context))
+                measure(context, SizeF(320f, 320f), root)
+                return root.findViewById<TextView>(R.id.widget_empty).text.toString()
+            }
+            val shopping = TaskList("render-test", "日常采购", ListKind.SHOPPING)
+            val todo = TaskList("render-test", "随手待办", ListKind.TODO)
+            assertEquals("还没要买的，记一条", emptyText(shopping, 0))
+            assertEquals("都买齐了 · 再记一条", emptyText(shopping, 3))
+            assertEquals("清单空空，想到就记", emptyText(todo, 0))
+            assertEquals("都完成了 · 再记一条", emptyText(todo, 3))
+        }
+    }
+
     @Test fun compactFeedbackReusesHeaderAndRetainsAddAndAccessibleDetails() {
         instrumentation.runOnMainSync {
             val context = context()
@@ -210,6 +231,8 @@ class WidgetRenderingTest {
         for (provider in providers) {
             assertEquals(110, (provider.minHeight / density).roundToInt())
             assertEquals(56, (provider.minResizeHeight / density).roundToInt())
+            assertNotEquals(0, provider.previewLayout)
+            assertNotEquals(0, provider.previewImage)
             // A 70dp grid cell with 16dp host padding previously rounded 144dp up to 3 rows.
             val hostPadding = android.appwidget.AppWidgetHostView.getDefaultPaddingForWidget(
                 baseContext, provider.provider, null)

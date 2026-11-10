@@ -61,7 +61,7 @@
 | AC17 | 通过 | `initialWidgetConfigureCancelLeavesNoConfig` 取消后无 config；保存配置后先 refresh 再 RESULT_OK |
 | AC18 | 部分通过 | 标准/大号、字体 200%、深浅色、宽度/行数通过；长标题点击看全文由实现保证，未专门 UI 断言；TalkBack 未人工验收 |
 | AC19 | 部分通过 | App force-stop 后冷启动数据可读；真实系统 Launcher 的小部件进程回收未验证 |
-| AC20 | 部分通过 | 模拟器重启后 App 数据可读；多次 `install -r` 保留数据；真实 Launcher 小部件重启/升级恢复未验证 |
+| AC20 | 部分通过 | 模拟器重启后 App 数据可读；多次 `install -r` 保留数据；v0.3.5 在 Android 14 AOSP Launcher 上验证重启/覆盖安装后小部件恢复并显示记录；HyperOS 3 真机未验证 |
 | AC21 | 部分通过 | 强停后用户手动重开数据正常；系统是否抑制 Widget 广播未在真机验证 |
 | AC22 | 通过 | SAF 导出→`pm clear`→导入恢复 3 条；RepositoryTest 重复导入按 ID 跳过；第二次手机 UI 导入未完整重复 |
 | AC23 | 通过 | BackupCodecTest 拒绝未知版本/app/超大/非法字段/悬空引用；RepositoryTest 冲突/悬空零写入 |

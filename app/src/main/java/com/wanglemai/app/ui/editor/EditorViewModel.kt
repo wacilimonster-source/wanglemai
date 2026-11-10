@@ -45,6 +45,7 @@ data class EditorUiState(
     val itemMissing: Boolean = false,
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val focusRequest: Int = 0,
+    val imeRequest: Int = 0,
     val crossTypeConfirm: Boolean = false,
     val savedCount: Int = 0,
     val dirty: Boolean = false
@@ -154,7 +155,11 @@ class EditorViewModel(
                         }
                     }
                 }
-                _state.value = loadedState.copy(focusRequest = loadedState.focusRequest + 1)
+                _state.value = loadedState.copy(
+                    focusRequest = loadedState.focusRequest + 1,
+                    imeRequest = if (mode == EditorMode.CREATE) loadedState.imeRequest + 1
+                    else loadedState.imeRequest
+                )
             } catch (_: Exception) {
                 _state.value = _state.value.copy(loaded = false,
                     error = "暂时无法读取记录，请返回后重试")
@@ -169,11 +174,15 @@ class EditorViewModel(
     fun setPinned(value: Boolean) = touch { it.copy(pinned = value) }
     fun setBatch(value: Boolean) {
         if (mode != EditorMode.CREATE) return
-        touch { it.copy(batch = value, focusRequest = it.focusRequest + 1) }
+        touch { it.copy(batch = value, focusRequest = it.focusRequest + 1,
+            imeRequest = it.imeRequest + 1) }
     }
 
-    fun requestFocus() {
-        _state.value = _state.value.copy(focusRequest = _state.value.focusRequest + 1)
+    fun requestFocus(showIme: Boolean = false) {
+        _state.value = _state.value.copy(
+            focusRequest = _state.value.focusRequest + 1,
+            imeRequest = if (showIme) _state.value.imeRequest + 1 else _state.value.imeRequest
+        )
     }
 
     fun setListId(value: String) {
@@ -298,7 +307,8 @@ class EditorViewModel(
                         busy = false, error = null, draftRestored = false,
                         savedCount = result.itemIds.size,
                         info = "已保存 ${result.itemIds.size} 条",
-                        focusRequest = _state.value.focusRequest + 1
+                        focusRequest = _state.value.focusRequest + 1,
+                        imeRequest = _state.value.imeRequest + 1
                     )
                 } else {
                     _events.send(EditorEvent.Finished)
@@ -446,7 +456,8 @@ class EditorViewModel(
                     title = "", note = "", quantity = "", unit = "", pinned = false,
                     batch = false, draftRestored = false, conflict = false,
                     error = null, info = null, dirty = false,
-                    focusRequest = _state.value.focusRequest + 1
+                    focusRequest = _state.value.focusRequest + 1,
+                    imeRequest = _state.value.imeRequest + 1
                 )
             }
         }

@@ -98,6 +98,7 @@ class WidgetUpdateCoordinator(
         val sizes = WidgetSizes.forWidget(context, widgetId, large)
         val rows = dao.widgetItems(list.id, 12)
         val total = dao.count(list.id)
+        val completed = dao.countCompleted(list.id)
         val undoEntity = if (config != null) dao.undo(widgetId) else null
         val undo = undoEntity?.token()
         val add = activity(widgetId, "create", QuickEntryActivity.createIntent(context, list.id, widgetId))
@@ -124,7 +125,8 @@ class WidgetUpdateCoordinator(
                 footerMessage = transientMessages[widgetId],
                 dark = dark,
                 layout = WidgetLayout.resolve(context, size, density),
-                intents = intents
+                intents = intents,
+                completedCount = completed
             )
         }
         val views = if (Build.VERSION.SDK_INT >= 31 && layouts.size > 1)

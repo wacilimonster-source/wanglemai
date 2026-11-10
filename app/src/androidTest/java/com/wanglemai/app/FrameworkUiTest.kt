@@ -2,6 +2,7 @@ package com.wanglemai.app
 
 import android.appwidget.AppWidgetManager
 import android.content.Intent
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -9,6 +10,7 @@ import androidx.test.uiautomator.*
 import com.wanglemai.app.data.db.WidgetConfig
 import com.wanglemai.app.debug.WidgetHarnessActivity
 import com.wanglemai.app.domain.*
+import com.wanglemai.app.ui.editor.QuickEntryActivity
 import com.wanglemai.app.ui.main.MainActivity
 import com.wanglemai.app.widget.WidgetConfigureActivity
 import kotlinx.coroutines.*
@@ -30,6 +32,21 @@ class FrameworkUiTest {
     private fun focusedEditor(): UiObject2 =
         device.wait(Until.findObject(By.clazz("android.widget.EditText").focused(true)), 10_000)
             ?: error("Cannot find focused editor field")
+    private fun imeVisible(activity: android.app.Activity): Boolean {
+        val insets = activity.window.decorView.rootWindowInsets ?: return false
+        return WindowInsetsCompat.toWindowInsetsCompat(insets, activity.window.decorView)
+            .isVisible(WindowInsetsCompat.Type.ime())
+    }
+    private fun waitForIme(scenario: ActivityScenario<QuickEntryActivity>, expected: Boolean): Boolean {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (System.currentTimeMillis() < deadline) {
+            var visible = false
+            scenario.onActivity { visible = imeVisible(it) }
+            if (visible == expected) return true
+            Thread.sleep(100)
+        }
+        return false
+    }
     private fun tap(text: String) {
         var stale: StaleObjectException? = null
         repeat(4) {
@@ -344,6 +361,38 @@ class FrameworkUiTest {
             container.repository.deleteDraft("create:$DEFAULT_TODO")
         }
         Unit
+    }
+
+    @Test fun createShowsImeWhileEditKeepsContentVisible() = runBlocking {
+        resetSelection()
+        container.repository.deleteDraft("create:$DEFAULT_TODO")
+        val createScenario = ActivityScenario.launch<QuickEntryActivity>(
+            QuickEntryActivity.createIntent(context, DEFAULT_TODO))
+        try {
+            find("想到，就记一条。")
+            assertTrue("Create should show the keyboard", waitForIme(createScenario, true))
+        } finally {
+            createScenario.close()
+            container.repository.deleteDraft("create:$DEFAULT_TODO")
+        }
+        val stamp = System.currentTimeMillis()
+        val created = container.repository.create(ItemInput(DEFAULT_TODO, "键盘验证$stamp"),
+            UUID.randomUUID().toString()) as MutationResult.Success
+        val itemId = created.itemIds.single()
+        val editScenario = ActivityScenario.launch<QuickEntryActivity>(
+            QuickEntryActivity.editIntent(context, itemId))
+        try {
+            find("编辑这一条")
+            Thread.sleep(800)
+            var visible = false
+            editScenario.onActivity { visible = imeVisible(it) }
+            assertFalse("Edit should not cover the record with the keyboard", visible)
+        } finally {
+            editScenario.close()
+            container.repository.getItem(itemId)?.let {
+                container.repository.delete(it.id, it.version)
+            }
+        }
     }
 
     @Test fun backHidesImeBeforeKeepingDraft() = runBlocking {

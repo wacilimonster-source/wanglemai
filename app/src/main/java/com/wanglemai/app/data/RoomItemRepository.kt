@@ -26,6 +26,7 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
     override fun observeLists() = dao.observeLists().map { rows -> rows.map { it.model() } }
     override fun observeListCounts() = dao.observeListCounts().map { rows -> rows.associate { it.listId to it.count } }
     override fun observeActiveCount(listId: String) = dao.observeActiveCount(listId)
+    override fun observeCompletedCount(listId: String) = dao.observeCompletedCount(listId)
     override fun observeItems(listId: String, completed: Boolean, search: String) =
         dao.observeItems(listId, completed, search).map { rows -> rows.map { it.model() } }
 

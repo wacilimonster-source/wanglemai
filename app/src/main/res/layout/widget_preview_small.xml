@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static picker preview for the standard 4x2 widget. Never inflated on the launcher. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    tools:ignore="HardcodedText,UseCompoundDrawables">
+    <ImageView
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="@drawable/widget_background_light" android:scaleType="fitXY"
+        android:importantForAccessibility="no" android:contentDescription="@null" />
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:paddingTop="12dp" android:paddingBottom="12dp"
+        android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:paddingStart="16dp" android:paddingEnd="16dp"
+            android:gravity="center_vertical" android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:gravity="center_vertical"
+                android:maxLines="1" android:ellipsize="end"
+                android:text="随手待办" android:textSize="16sp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/widget_light_text" />
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="8dp" android:maxLines="1"
+                android:text="2 项" android:textSize="12sp"
+                android:textColor="@color/widget_light_secondary" />
+            <ImageView
+                android:layout_width="24dp" android:layout_height="24dp"
+                android:layout_marginStart="12dp" android:src="@drawable/ic_widget_add"
+                android:tint="@color/widget_light_primary"
+                android:importantForAccessibility="no" android:contentDescription="@null" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingStart="16dp" android:paddingEnd="16dp"
+            android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView
+                android:layout_width="48dp" android:layout_height="48dp"
+                android:padding="15dp" android:src="@drawable/widget_check_ring_light"
+                android:importantForAccessibility="no" android:contentDescription="@null" />
+            <TextView
+                android:layout_width="0dp" android:layout_height="52dp"
+                android:layout_weight="1" android:gravity="center_vertical"
+                android:maxLines="1" android:ellipsize="end"
+                android:text="给阳台的绿植浇水" android:textSize="14sp"
+                android:textColor="@color/widget_light_text" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:paddingStart="16dp" android:paddingEnd="16dp"
+            android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageView
+                android:layout_width="48dp" android:layout_height="48dp"
+                android:padding="15dp" android:src="@drawable/widget_check_ring_light"
+                android:importantForAccessibility="no" android:contentDescription="@null" />
+            <TextView
+                android:layout_width="0dp" android:layout_height="52dp"
+                android:layout_weight="1" android:gravity="center_vertical"
+                android:maxLines="1" android:ellipsize="end"
+                android:text="取回干洗的外套" android:textSize="14sp"
+                android:textColor="@color/widget_light_text" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

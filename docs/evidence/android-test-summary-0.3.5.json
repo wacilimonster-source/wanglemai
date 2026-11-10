@@ -1,0 +1,47 @@
+{
+  "version": "0.3.5-mvp",
+  "versionCode": 10,
+  "commitBase": "63f219e",
+  "date": "2026-11-10",
+  "environment": {
+    "device": "emulator-5554",
+    "android": "14 / API 34",
+    "display": "1080x1920 @420dpi",
+    "avd": "pika_test"
+  },
+  "jvmTests": {
+    "total": 68,
+    "failed": 0
+  },
+  "instrumentation": {
+    "finalApkRun": {
+      "total": 46,
+      "passed": 46,
+      "failed": 0,
+      "note": "在最终 v0.3.5 debug APK 上完整重跑；新增全完成/空清单文案、completedCount、IME 与预览元数据用例"
+    },
+    "earlierRun": {
+      "total": 46,
+      "passed": 45,
+      "failed": 1,
+      "note": "同一代码清空 Launcher/应用数据后的首轮，appCanCreateEditAndPersistRecord 偶发未在 10 秒内定位新记录；单例重跑通过，完整重跑 46/46 通过"
+    }
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 61
+  },
+  "manual": [
+    "待买页显示“1 样东西，等你买”；已购买筛选显示“1 件已买”",
+    "待办最后一条完成后显示“都完成了，心里轻轻。”与空态“都完成了，点下方再记一条。”",
+    "待办小部件在 0 条未完成但存在已完成记录时显示“都完成了 · 再记一条”",
+    "编辑已有记录不自动弹出键盘；点击标题后键盘正常出现；新增记录仍自动弹出键盘",
+    "小部件选择器显示静态示例预览（清单名、2 条记录、数量、新增入口）",
+    "真实 Launcher 小部件在模拟器重启后恢复并显示记录；install -r 覆盖安装后仍显示记录"
+  ],
+  "artifacts": {
+    "apk": "releases/wanglemai-0.3.5-debug.apk",
+    "sha256": "826c3cb09de2825343f9d65de37a912db7b88bde49edac0a4a47e89ed3f80ef7",
+    "manifest": "update/latest.json"
+  }
+}

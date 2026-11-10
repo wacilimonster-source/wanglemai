@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "version": "v0.3.4",
-  "releaseName": "忘了没 v0.3.4 · 稳定性与可访问性修复",
-  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.3.4",
-  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.4/wanglemai-0.3.4-debug.apk",
-  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.3.4/releases/wanglemai-0.3.4-debug.apk",
-  "sha256": "4355d641bd39b54d411e98293c2d6963b62428e27963aaab6cb1d886782f95ca",
-  "publishedAt": "2026-11-09T10:43:06Z"
+  "version": "v0.3.5",
+  "releaseName": "忘了没 v0.3.5 · 闭环状态与桌面刷新",
+  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.3.5",
+  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.5/wanglemai-0.3.5-debug.apk",
+  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.3.5/releases/wanglemai-0.3.5-debug.apk",
+  "sha256": "826c3cb09de2825343f9d65de37a912db7b88bde49edac0a4a47e89ed3f80ef7",
+  "publishedAt": "2026-11-10T06:19:42Z"
 }

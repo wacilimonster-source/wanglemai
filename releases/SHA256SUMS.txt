@@ -7,3 +7,4 @@ facbd875dbdef2976d3d4abd44a690e064c8b8be3d6d854ba94b07f78b9b48a3 *wanglemai-0.3.
 9a1c41b59f915035c68c20dbf73f552b7c449de5307dd8e7972dfa2bf0aa659f *wanglemai-0.3.2-debug.apk
 56551c4767e7bea8bf99c7451bfb0df53416fc0f4b7add012d816af44437d0cd *wanglemai-0.3.3-debug.apk
 4355d641bd39b54d411e98293c2d6963b62428e27963aaab6cb1d886782f95ca *wanglemai-0.3.4-debug.apk
+826c3cb09de2825343f9d65de37a912db7b88bde49edac0a4a47e89ed3f80ef7 *wanglemai-0.3.5-debug.apk

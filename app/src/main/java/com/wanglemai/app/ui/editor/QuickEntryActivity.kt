@@ -103,7 +103,7 @@ class QuickEntryActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus && !initialFocusRequested) {
             initialFocusRequested = true
-            editorVm.requestFocus()
+            editorVm.requestFocus(showIme = editorVm.state.value.mode == EditorMode.CREATE)
         }
     }
 
@@ -144,13 +144,23 @@ private fun EditorSheet(
     var listMenu by remember { mutableStateOf(false) }
     var deleteDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.loaded, state.focusRequest, state.itemMissing) {
+    LaunchedEffect(state.loaded, state.focusRequest, state.imeRequest, state.itemMissing) {
         if (state.loaded && !state.itemMissing) {
             delay(120)
             runCatching { focusRequester.requestFocus() }
-            keyboard?.show()
-            delay(220)
-            keyboard?.show()
+            // Create and save-and-continue need the keyboard immediately; edit/read mode
+            // should show the full title and note instead of covering them.
+            if (state.imeRequest > 0) {
+                keyboard?.show()
+                delay(220)
+                keyboard?.show()
+            } else {
+                // Keep the title focused for hardware keyboards, but do not let the
+                // platform's focus-triggered IME cover an existing record.
+                keyboard?.hide()
+                delay(160)
+                keyboard?.hide()
+            }
         }
     }
 
