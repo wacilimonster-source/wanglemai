@@ -98,8 +98,14 @@ jobs:
           mkdir -p "$HOME/.android"
           printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$HOME/.android/debug.keystore"
           chmod 600 "$HOME/.android/debug.keystore"
+          # GitHub Actions ubuntu-latest sets XDG_CONFIG_HOME, which AGP prefers over ~/.android unless ANDROID_USER_HOME is set.
+          if [[ -n "${XDG_CONFIG_HOME:-}" ]]; then
+            mkdir -p "$XDG_CONFIG_HOME/.android"
+            cp "$HOME/.android/debug.keystore" "$XDG_CONFIG_HOME/.android/debug.keystore"
+            chmod 600 "$XDG_CONFIG_HOME/.android/debug.keystore"
+          fi
+          echo "ANDROID_USER_HOME=$HOME/.android" >> "$GITHUB_ENV"
           keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android | grep -E "Alias|SHA256" || true
-          env | grep -iE "android|xdg|home" | sort || true
 
       - name: Bump version
         if: env.RESUMED != 'true'
@@ -107,7 +113,7 @@ jobs:
 
       - name: Build and test
         if: env.RESUMED != 'true'
-        run: bash ./gradlew --no-daemon :app:signingReport :app:testDebugUnitTest :app:assembleDebug
+        run: bash ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
 
       - name: Stage release artifacts
         if: env.RESUMED != 'true'
