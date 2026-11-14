@@ -78,10 +78,8 @@ jobs:
       - name: Set up Android SDK
         if: env.RESUMED != 'true'
         uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK 36
-        if: env.RESUMED != 'true'
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.0.0
 
       - name: Set up Gradle
         if: env.RESUMED != 'true'
@@ -98,7 +96,7 @@ jobs:
             exit 1
           fi
           mkdir -p "$HOME/.android"
-          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$HOME/.android/debug.keystore"
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$HOME/.android/debug.keystore"
           chmod 600 "$HOME/.android/debug.keystore"
 
       - name: Bump version
