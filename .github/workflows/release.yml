@@ -98,6 +98,8 @@ jobs:
           mkdir -p "$HOME/.android"
           printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$HOME/.android/debug.keystore"
           chmod 600 "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android | grep -E "Alias|SHA256" || true
+          env | grep -iE "android|xdg|home" | sort || true
 
       - name: Bump version
         if: env.RESUMED != 'true'
@@ -105,7 +107,7 @@ jobs:
 
       - name: Build and test
         if: env.RESUMED != 'true'
-        run: bash ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+        run: bash ./gradlew --no-daemon :app:signingReport :app:testDebugUnitTest :app:assembleDebug
 
       - name: Stage release artifacts
         if: env.RESUMED != 'true'
