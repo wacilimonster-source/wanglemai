@@ -1,0 +1,118 @@
+{
+  "cases": [
+    {
+      "id": "gate-flaky-search",
+      "type": "boolean",
+      "domain": "software testing, Android instrumentation",
+      "question": "这次失败是否可能由产品缺陷导致？",
+      "expected": "no",
+      "state": "测试: com.wanglemai.app.FrameworkUiTest#settingsThemeAndLiteralSearch\n结果: 全量 instrumentation 首跑失败；保持代码不变，同一设备单例重跑 1/1 通过。\n断言: 未找到文本「搜索这份清单…」。\n设备: emulator-5554，Android 14/API34。\n历史: 记录为一次未稳定复现的 UI 测试失败。\n日志摘要: 首次完整运行 43 项中 42 项通过，该用例失败；单例重跑通过。未见产品异常堆栈。"
+    },
+    {
+      "id": "gate-utp-listener",
+      "type": "boolean",
+      "domain": "software testing, Android instrumentation",
+      "question": "这次失败是否可能由产品缺陷导致？",
+      "expected": "no",
+      "state": "测试: Gradle connectedDebugAndroidTest\n结果: 测试执行前中止：Failed to receive the UTP test results。\n断言: UTP test results listener gRPC server 启动失败。\n设备: 本机 Windows + emulator-5554。\n历史: 多次出现，属于本机工具链问题。\n日志摘要: 测试 XML 为 0 失败；改用 adb am instrument 后用例可执行。"
+    },
+    {
+      "id": "gate-known-draft-loss",
+      "type": "boolean",
+      "domain": "Android app, software testing",
+      "question": "这条已知限制是否属于需要修复的产品缺陷？",
+      "expected": "yes",
+      "state": "已知限制：草稿在 onStop 写盘，突然断电前最后 300ms 的输入可能丢失。\n当前保证：正常返回、切换清单、保存失败时保留草稿；没有对突然断电做持久化保证。\n用户影响：极端情况下用户最近输入的文字丢失。"
+    },
+    {
+      "id": "scope-widget-layout",
+      "type": "multi_select",
+      "domain": "Android CI test scope selection",
+      "question": "本次改动最低需要运行哪些测试/验证？",
+      "options": ["JVM 单元测试", "设备 instrumentation", "小部件/桌面手工验证", "更新/安装手工验证", "真机设备矩阵（API26/31/36、HyperOS）", "性能 P95", "仅文档审阅，不需要代码测试"],
+      "expected": ["JVM 单元测试", "设备 instrumentation", "小部件/桌面手工验证"],
+      "state": "改动：v0.3.2 小部件缩小与超紧凑密度。\n代码文件：Models.kt、WidgetConfigureActivity.kt、WidgetLayout.kt、WidgetRenderer.kt、WidgetUpdateCoordinator.kt，以及 widget_content_ultra.xml、widget_row_ultra.xml、widget_large_info.xml、widget_small_info.xml。\n测试文件：FrameworkUiTest.kt（+56 行）、WidgetRenderingTest.kt（+50/- 行）。\n影响面：小部件尺寸、密度、布局、配置页；不涉及数据库 schema、备份、更新下载。"
+    },
+    {
+      "id": "scope-update-download",
+      "type": "multi_select",
+      "domain": "Android CI test scope selection",
+      "question": "本次改动最低需要运行哪些测试/验证？",
+      "options": ["JVM 单元测试", "设备 instrumentation", "小部件/桌面手工验证", "更新/安装手工验证", "真机设备矩阵（API26/31/36、HyperOS）", "性能 P95", "仅文档审阅，不需要代码测试"],
+      "expected": ["JVM 单元测试", "更新/安装手工验证"],
+      "state": "改动：客户端内下载更新 APK，流式校验 SHA256，完成后调起系统安装器。\n代码文件：ApkDownloader.kt、UpdateCenter.kt、UpdateChecker.kt、InstallApk.kt、AndroidManifest.xml、file_paths.xml。\n测试文件：ApkDownloaderTest.kt（+255 行）、UpdateCenterTest.kt（+170 行）。\n影响面：网络下载、哈希校验、缓存文件、未知来源安装权限；不涉及小部件布局和数据库 schema。"
+    },
+    {
+      "id": "scope-docs-only",
+      "type": "multi_select",
+      "domain": "Android CI test scope selection",
+      "question": "本次改动最低需要运行哪些测试/验证？",
+      "options": ["JVM 单元测试", "设备 instrumentation", "小部件/桌面手工验证", "更新/安装手工验证", "真机设备矩阵（API26/31/36、HyperOS）", "性能 P95", "仅文档审阅，不需要代码测试"],
+      "expected": ["仅文档审阅，不需要代码测试"],
+      "state": "改动：关闭负一屏范围，更新准入结论。\n文件：README.md、docs/01-product.md、docs/03-acceptance.md、docs/04-agent-tasks.md、docs/05-dev-prompt.md、docs/07-framework-status.md、docs/development-log.md。\n没有修改 app/src 下的代码、资源、Gradle 配置或测试。"
+    },
+    {
+      "id": "ac01-first-launch",
+      "type": "choice",
+      "domain": "Android acceptance evidence grading",
+      "question": "该验收项当前证据等级是什么？",
+      "choices": ["已覆盖且有证据", "已实现但证据不足", "未覆盖", "不适用"],
+      "expected": "已覆盖且有证据",
+      "state": "验收项：AC01 首次离线启动。\n判定标准：幂等生成两默认清单，无样例用户记录，无登录或权限阻挡。\n现有证据：pm clear 后启动实测，只有两个默认清单、无样例记录、无登录/权限阻挡；initialize 幂等有自动化测试。"
+    },
+    {
+      "id": "ac18-widget-accessibility",
+      "type": "choice",
+      "domain": "Android acceptance evidence grading",
+      "question": "该验收项当前证据等级是什么？",
+      "choices": ["已覆盖且有证据", "已实现但证据不足", "未覆盖", "不适用"],
+      "expected": "已实现但证据不足",
+      "state": "验收项：AC18 小部件缩放、长标题、200% 字号、深浅主题切换。\n判定标准：不遮挡新增/保存；至少 1 行；全文编辑可看；TalkBack 可用。\n现有证据：标准/大号、200% 字体、深浅色、宽度/行数通过；长标题全文未专门 UI 断言；TalkBack 未人工验收。"
+    },
+    {
+      "id": "ac21-force-stop",
+      "type": "choice",
+      "domain": "Android acceptance evidence grading",
+      "question": "该验收项当前证据等级是什么？",
+      "choices": ["已覆盖且有证据", "已实现但证据不足", "未覆盖", "不适用"],
+      "expected": "已实现但证据不足",
+      "state": "验收项：AC21 系统设置“强行停止”App。\n判定标准：如系统抑制广播，明确记录平台行为；用户手动重开后恢复，不承诺强停后仍可后台工作。\n现有证据：强停后用户手动重开数据正常；系统是否抑制 Widget 广播未在真机验证。"
+    },
+    {
+      "id": "ac25-storage-failure",
+      "type": "choice",
+      "domain": "Android acceptance evidence grading",
+      "question": "该验收项当前证据等级是什么？",
+      "choices": ["已覆盖且有证据", "已实现但证据不足", "未覆盖", "不适用"],
+      "expected": "未覆盖",
+      "state": "验收项：AC25 模拟数据库写入失败/空间不足。\n判定标准：不关闭编辑、不显示已保存、不丢原内容；重试可用。\n现有证据：未做存储写满/IO 故障注入；编辑失败保留输入由 validation UI 测试覆盖，真实 StorageError 未测。"
+    },
+    {
+      "id": "ac26-offline-core",
+      "type": "choice",
+      "domain": "Android acceptance evidence grading",
+      "question": "该验收项当前证据等级是什么？",
+      "choices": ["已覆盖且有证据", "已实现但证据不足", "未覆盖", "不适用"],
+      "expected": "已覆盖且有证据",
+      "state": "验收项：AC26 完全断网且未允许后台自启动。\n判定标准：核心新增/查看/完成仍可用；定时刷新不作为核心依赖。\n现有证据：核心操作均为本地 Room；INTERNET 仅用于手动检查更新；断网未影响核心流程。"
+    },
+    {
+      "id": "ac27-talkback",
+      "type": "choice",
+      "domain": "Android acceptance evidence grading",
+      "question": "该验收项当前证据等级是什么？",
+      "choices": ["已覆盖且有证据", "已实现但证据不足", "未覆盖", "不适用"],
+      "expected": "已实现但证据不足",
+      "state": "验收项：AC27 TalkBack、键盘导航、触控。\n判定标准：圆圈正文独立播报，触控目标≥48dp；错误可感知。\n现有证据：语义、48dp 目标、live region、内容描述已实现；TalkBack 人工验收未执行。"
+    },
+    {
+      "id": "ac-app-vault",
+      "type": "choice",
+      "domain": "Android acceptance evidence grading",
+      "question": "该验收项当前证据等级是什么？",
+      "choices": ["已覆盖且有证据", "已实现但证据不足", "未覆盖", "不适用"],
+      "expected": "不适用",
+      "state": "验收项：澎湃 OS 3 负一屏支持标准 Android Widget。\n判定标准：标准 Android Widget 可添加到系统负一屏并正常刷新。\n现有证据：实测负一屏只接受小米小部件；本项目不上架应用商店，小米小部件准入不成立，负一屏开发已取消。"
+    }
+  ]
+}

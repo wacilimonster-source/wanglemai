@@ -1,0 +1,7 @@
+{
+  "id": "ticket-owner-smoke",
+  "type": "choice",
+  "question": "Which team owns this ticket?",
+  "choices": ["Infra", "Billing", "Growth"],
+  "state": "Ticket: 502 errors on checkout right after the 2pm deploy."
+}

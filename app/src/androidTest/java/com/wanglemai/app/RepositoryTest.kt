@@ -25,8 +25,8 @@ class RepositoryTest {
         repo = RoomItemRepository(db); repo.initialize()
     }
     @After fun close() { db.close() }
-    private suspend fun create(title: String = "牛奶"): Item {
-        val result = repo.create(ItemInput(DEFAULT_SHOPPING, title, quantity = "2", unit = "盒"), UUID.randomUUID().toString()) as MutationResult.Success
+    private suspend fun create(title: String = "取快递"): Item {
+        val result = repo.create(ItemInput(DEFAULT_TODO, title), UUID.randomUUID().toString()) as MutationResult.Success
         return repo.getItem(result.itemIds.single())!!
     }
     private suspend fun createIn(listId: String, title: String): Item {
@@ -34,15 +34,15 @@ class RepositoryTest {
             as MutationResult.Success
         return repo.getItem(result.itemIds.single())!!
     }
-    private suspend fun newList(kind: ListKind, name: String): String {
-        val result = repo.createList(kind, name) as MutationResult.Success
+    private suspend fun newList(name: String): String {
+        val result = repo.createList(name) as MutationResult.Success
         return result.itemIds.single()
     }
     private fun newDatabase() = Room.inMemoryDatabaseBuilder(
         InstrumentationRegistry.getInstrumentation().targetContext, AppDatabase::class.java).build()
 
     @Test fun defaultInitializationIsIdempotent() = runBlocking {
-        repo.initialize(); repo.initialize(); assertEquals(2, db.dao().lists().size)
+        repo.initialize(); repo.initialize(); assertEquals(1, db.dao().lists().size)
     }
     @Test fun duplicateCommandCreatesOnlyOneItem() = runBlocking {
         val command = UUID.randomUUID().toString()
@@ -52,9 +52,9 @@ class RepositoryTest {
     }
     @Test fun staleUpdateCannotOverwriteNewText() = runBlocking {
         val item = create()
-        assertTrue(repo.update(item.id, item.version, ItemInput(DEFAULT_SHOPPING, "鲜牛奶")) is MutationResult.Success)
-        assertEquals(MutationResult.Conflict, repo.update(item.id, item.version, ItemInput(DEFAULT_SHOPPING, "旧内容")))
-        assertEquals("鲜牛奶", repo.getItem(item.id)!!.title)
+        assertTrue(repo.update(item.id, item.version, ItemInput(DEFAULT_TODO, "新内容")) is MutationResult.Success)
+        assertEquals(MutationResult.Conflict, repo.update(item.id, item.version, ItemInput(DEFAULT_TODO, "旧内容")))
+        assertEquals("新内容", repo.getItem(item.id)!!.title)
     }
     @Test fun completionReplayDoesNotToggleAndUndoHasVersionGuard() = runBlocking {
         val item = create()
@@ -67,33 +67,33 @@ class RepositoryTest {
     }
     @Test fun widgetUndoIsClearedAfterRecordEdited() = runBlocking {
         val item = create(); val dao = db.dao()
-        dao.saveConfig(WidgetConfig(101, "test-provider", DEFAULT_SHOPPING))
+        dao.saveConfig(WidgetConfig(101, "test-provider", DEFAULT_TODO))
         repo.setCompleted(item.id, item.version, true, 101)
         val token = dao.undo(101)!!
         val fresh = repo.getItem(item.id)!!
-        repo.update(fresh.id, fresh.version, ItemInput(DEFAULT_SHOPPING, "新内容"))
+        repo.update(fresh.id, fresh.version, ItemInput(DEFAULT_TODO, "新内容"))
         assertNull(dao.undo(101)); assertEquals(MutationResult.Conflict, repo.undoWidgetCompletion(101, token.commandId))
     }
     @Test fun searchTreatsSqlWildcardsLiterally() = runBlocking {
         create("100%_完成"); create("普通记录")
-        assertEquals(1, repo.observeItems(DEFAULT_SHOPPING, false, "%_").first().size)
+        assertEquals(1, repo.observeItems(DEFAULT_TODO, false, "%_").first().size)
     }
     @Test fun completedCountTracksCompletedItemsAndExcludesDeleted() = runBlocking {
-        val item = create("牛奶")
-        create("面包")
-        assertEquals(0, repo.observeCompletedCount(DEFAULT_SHOPPING).first())
+        val item = create("记录一")
+        create("记录二")
+        assertEquals(0, repo.observeCompletedCount(DEFAULT_TODO).first())
         assertTrue(repo.setCompleted(item.id, item.version, true) is MutationResult.Success)
-        assertEquals(1, repo.observeCompletedCount(DEFAULT_SHOPPING).first())
-        assertEquals(1, db.dao().countCompleted(DEFAULT_SHOPPING))
+        assertEquals(1, repo.observeCompletedCount(DEFAULT_TODO).first())
+        assertEquals(1, db.dao().countCompleted(DEFAULT_TODO))
         val completed = repo.getItem(item.id)!!
         assertTrue(repo.delete(completed.id, completed.version) is MutationResult.Success)
-        assertEquals(0, repo.observeCompletedCount(DEFAULT_SHOPPING).first())
-        assertEquals(0, db.dao().countCompleted(DEFAULT_SHOPPING))
+        assertEquals(0, repo.observeCompletedCount(DEFAULT_TODO).first())
+        assertEquals(0, db.dao().countCompleted(DEFAULT_TODO))
     }
     @Test fun deletionIsSoftAndCannotBeEdited() = runBlocking {
         val item = create(); assertTrue(repo.delete(item.id, item.version) is MutationResult.Success)
-        assertNull(repo.getItem(item.id)); assertEquals(0, db.dao().count(DEFAULT_SHOPPING))
-        assertEquals(MutationResult.NotFound, repo.update(item.id, item.version, ItemInput(DEFAULT_SHOPPING, "旧文本")))
+        assertNull(repo.getItem(item.id)); assertEquals(0, db.dao().count(DEFAULT_TODO))
+        assertEquals(MutationResult.NotFound, repo.update(item.id, item.version, ItemInput(DEFAULT_TODO, "旧文本")))
     }
     @Test fun recordsSurviveClosingAndReopeningDatabase() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -156,18 +156,17 @@ class RepositoryTest {
         assertEquals(2, repo.observeItems(DEFAULT_TODO, false, "").first().size)
     }
 
-    @Test fun listNamesAreUniquePerKindAndDefaultsCannotBeDeleted() = runBlocking {
+    @Test fun listNamesAreUniqueAndDefaultsCannotBeDeleted() = runBlocking {
         assertTrue(repo.deleteListAndMoveToDefault(DEFAULT_TODO, 1) is MutationResult.ValidationError)
-        val work = newList(ListKind.TODO, " 工作 ")
+        val work = newList(" 工作 ")
         assertEquals("工作", repo.list(work)!!.name)
-        assertTrue(repo.createList(ListKind.TODO, "工作") is MutationResult.ValidationError)
-        assertTrue(repo.createList(ListKind.TODO, "工作  ") is MutationResult.ValidationError)
-        val read = newList(ListKind.TODO, "ABC")
-        assertTrue(repo.createList(ListKind.TODO, "abc") is MutationResult.ValidationError)
+        assertTrue(repo.createList("工作") is MutationResult.ValidationError)
+        assertTrue(repo.createList("工作  ") is MutationResult.ValidationError)
+        val read = newList("ABC")
+        assertTrue(repo.createList("abc") is MutationResult.ValidationError)
         assertTrue(repo.renameList(read, repo.list(read)!!.version, "工作") is MutationResult.ValidationError)
         assertTrue(repo.renameList(read, 99, "阅读") is MutationResult.Conflict)
-        assertTrue(repo.createList(ListKind.SHOPPING, "工作") is MutationResult.Success)
-        assertTrue(repo.createList(ListKind.TODO, "😀".repeat(21)) is MutationResult.ValidationError)
+        assertTrue(repo.createList("😀".repeat(21)) is MutationResult.ValidationError)
 
         val defaultVersion = repo.list(DEFAULT_TODO)!!.version
         assertTrue(repo.renameList(DEFAULT_TODO, defaultVersion, "我的待办") is MutationResult.Success)
@@ -176,7 +175,7 @@ class RepositoryTest {
 
     @Test fun deletingListMovesItemsAndWidgetsAndDrafts() = runBlocking {
         val dao = db.dao()
-        val custom = newList(ListKind.TODO, "工作")
+        val custom = newList("工作")
         val active = createIn(custom, "写周报")
         val completed = createIn(custom, "回邮件")
         val softDeleted = createIn(custom, "旧记录")
@@ -186,8 +185,8 @@ class RepositoryTest {
         dao.saveConfig(WidgetConfig(201, "test-provider", custom))
         repo.setCompleted(widgetBound.id, widgetBound.version, true, 201)
         assertNotNull(dao.undo(201))
-        repo.saveDraft(Draft("create:$custom", custom, "草稿", "", "", "", false, false, null))
-        repo.saveDraft(Draft("edit:${active.id}", custom, "编辑草稿", "", "", "", false, false, active.version))
+        repo.saveDraft(Draft("create:$custom", custom, "草稿", "", false, false, null))
+        repo.saveDraft(Draft("edit:${active.id}", custom, "编辑草稿", "", false, false, active.version))
 
         assertTrue(repo.renameList(custom, 1, "家务") is MutationResult.Success)
         val source = repo.list(custom)!!
@@ -219,7 +218,7 @@ class RepositoryTest {
     }
 
     @Test fun pinnedAndRestoredItemsKeepFixedOrder() = runBlocking {
-        val listId = newList(ListKind.TODO, "排序")
+        val listId = newList("排序")
         val a = createIn(listId, "A")
         val b = createIn(listId, "B")
         val c = createIn(listId, "C")
@@ -253,12 +252,12 @@ class RepositoryTest {
     }
 
     @Test fun draftsAndPreferencesRoundTrip() = runBlocking {
-        val draft = Draft("create:$DEFAULT_SHOPPING", DEFAULT_SHOPPING, "牛奶", "备注",
-            "2", "盒", true, true, null)
+        val draft = Draft("create:$DEFAULT_TODO", DEFAULT_TODO, "取快递", "备注",
+            true, true, null)
         repo.saveDraft(draft)
         assertEquals(draft, repo.getDraft(draft.draftKey))
         val item = create()
-        val editDraft = Draft("edit:${item.id}", DEFAULT_SHOPPING, "编辑", "", "", "",
+        val editDraft = Draft("edit:${item.id}", DEFAULT_TODO, "编辑", "",
             false, false, item.version)
         repo.saveDraft(editDraft)
         assertEquals(editDraft, repo.getDraft(editDraft.draftKey))
@@ -272,13 +271,13 @@ class RepositoryTest {
     }
 
     @Test fun backupExportAndImportIsIdempotentAndRenamesConflicts() = runBlocking {
-        val custom = newList(ListKind.TODO, "工作")
+        val custom = newList("工作")
         createIn(custom, "写周报")
-        create("牛奶")
+        create("取快递")
         val backup = RoomBackupRepository(db)
         val json = backup.exportJson()
         val document = BackupCodec.decode(json)
-        assertEquals(3, document.lists.size)
+        assertEquals(2, document.lists.size)
         assertEquals(2, document.items.size)
 
         val previewSame = backup.validateAndPreview(json)
@@ -287,14 +286,14 @@ class RepositoryTest {
         val sameReport = backup.merge(document)
         assertEquals(0, sameReport.addedLists)
         assertEquals(0, sameReport.addedItems)
-        assertEquals(3, db.dao().lists().size)
+        assertEquals(2, db.dao().lists().size)
         assertEquals(2, db.dao().backupItems().size)
 
         val db2 = newDatabase()
         try {
             val repo2 = RoomItemRepository(db2)
             repo2.initialize()
-            repo2.createList(ListKind.TODO, "工作")
+            repo2.createList("工作")
             val backup2 = RoomBackupRepository(db2)
             val preview2 = backup2.validateAndPreview(json)
             assertEquals(1, preview2.newLists)
@@ -302,7 +301,7 @@ class RepositoryTest {
             val report = backup2.merge(BackupCodec.decode(json))
             assertEquals(1, report.addedLists)
             assertEquals(2, report.addedItems)
-            assertEquals(2, report.skipped)
+            assertEquals(1, report.skipped)
             val importedList = db2.dao().list(custom)!!
             assertTrue(importedList.name.endsWith("（导入2）"))
             assertEquals("写周报", repo2.observeItems(custom, false, "").first().single().title)
@@ -313,14 +312,13 @@ class RepositoryTest {
     @Test fun backupNameSuffixNeverExceedsTwentyCodePoints() = runBlocking {
         val longName = "一二三四五六七八九十一二三四五六七八九十"
         assertEquals(20, Validation.codePoints(longName))
-        newList(ListKind.TODO, longName)
+        newList(longName)
         val otherId = UUID.randomUUID().toString()
         val document = BackupDocument(
             BACKUP_SCHEMA_VERSION, BACKUP_APP_ID, System.currentTimeMillis(),
             lists = listOf(
-                BackupList(DEFAULT_TODO, ListKind.TODO, "随手待办", true, 1, 1),
-                BackupList(DEFAULT_SHOPPING, ListKind.SHOPPING, "日常采购", true, 1, 1),
-                BackupList(otherId, ListKind.TODO, longName, false, 1, 1)
+                BackupList(DEFAULT_TODO, "TODO", "随手待办", true, 1, 1),
+                BackupList(otherId, "TODO", longName, false, 1, 1)
             ), items = emptyList()
         )
         RoomBackupRepository(db).merge(document)
@@ -329,37 +327,74 @@ class RepositoryTest {
         assertTrue(imported.name.endsWith("（导入2）"))
     }
 
-    @Test fun backupRejectsKindConflictAndDanglingReferencesWithoutWriting() = runBlocking {
-        val custom = newList(ListKind.TODO, "工作")
+    /** Pre-v0.4.0 backups: SHOPPING lists are dropped and their records merge into the default list. */
+    @Test fun backupImportConvertsLegacyShoppingLists() = runBlocking {
+        val customShoppingId = "11111111-2222-3333-4444-555555555555"
+        val legacyItemId = "550e8400-e29b-41d4-a716-446655440000"
+        val legacyCompletedId = "550e8400-e29b-41d4-a716-446655440001"
+        val json = JSONObject().apply {
+            put("schemaVersion", 1)
+            put("app", BACKUP_APP_ID)
+            put("exportedAt", 1L)
+            put("lists", org.json.JSONArray()
+                .put(JSONObject().put("id", DEFAULT_TODO).put("kind", "TODO")
+                    .put("name", "随手待办").put("isDefault", true)
+                    .put("createdAt", 1L).put("updatedAt", 1L))
+                .put(JSONObject().put("id", DEFAULT_SHOPPING).put("kind", "SHOPPING")
+                    .put("name", "日常采购").put("isDefault", true)
+                    .put("createdAt", 1L).put("updatedAt", 1L))
+                .put(JSONObject().put("id", customShoppingId).put("kind", "SHOPPING")
+                    .put("name", "周末采购").put("isDefault", false)
+                    .put("createdAt", 1L).put("updatedAt", 1L)))
+            put("items", org.json.JSONArray()
+                .put(JSONObject().put("id", legacyItemId).put("listId", DEFAULT_SHOPPING)
+                    .put("title", "牛奶").put("note", "")
+                    .put("quantityDecimal", "2").put("unit", "盒")
+                    .put("completed", false).put("pinned", false)
+                    .put("sortKey", 1024).put("createdAt", 1L).put("updatedAt", 1L)
+                    .put("completedAt", JSONObject.NULL))
+                .put(JSONObject().put("id", legacyCompletedId).put("listId", customShoppingId)
+                    .put("title", "面包").put("note", "")
+                    .put("quantityDecimal", JSONObject.NULL).put("unit", JSONObject.NULL)
+                    .put("completed", true).put("pinned", false)
+                    .put("sortKey", 2048).put("createdAt", 1L).put("updatedAt", 1L)
+                    .put("completedAt", 1L)))
+        }
+        val backup = RoomBackupRepository(db)
+        val document = BackupCodec.decode(json.toString())
+        val preview = backup.validateAndPreview(json.toString())
+        assertEquals(3, preview.totalLists)
+        assertEquals(2, preview.newItems)
+        assertEquals(0, preview.newLists)
+        val report = backup.merge(document)
+        assertEquals(0, report.addedLists)
+        assertEquals(2, report.addedItems)
+        assertEquals(1, db.dao().lists().size)
+        val active = repo.observeItems(DEFAULT_TODO, false, "").first()
+        val done = repo.observeItems(DEFAULT_TODO, true, "").first()
+        assertEquals(listOf("牛奶"), active.map { it.title })
+        assertEquals(listOf("面包"), done.map { it.title })
+    }
+
+    @Test fun backupRejectsDanglingReferencesWithoutWriting() = runBlocking {
+        val custom = newList("工作")
         createIn(custom, "写周报")
         val backup = RoomBackupRepository(db)
-        val json = JSONObject(backup.exportJson())
-        val lists = json.getJSONArray("lists")
-        for (i in 0 until lists.length()) {
-            val list = lists.getJSONObject(i)
-            if (list.getString("id") == custom) list.put("kind", "SHOPPING")
-        }
-        val conflicting = BackupCodec.decode(json.toString())
         val listsBefore = db.dao().lists().size
         val itemsBefore = db.dao().allItemIds().size
-        assertTrue(runCatching { backup.validateAndPreview(json.toString()) }.exceptionOrNull() is BackupException)
-        assertTrue(runCatching { backup.merge(conflicting) }.exceptionOrNull() is BackupException)
-        assertEquals(listsBefore, db.dao().lists().size)
-        assertEquals(itemsBefore, db.dao().allItemIds().size)
 
         val newListId = UUID.randomUUID().toString()
         val dangling = BackupDocument(
             BACKUP_SCHEMA_VERSION, BACKUP_APP_ID, System.currentTimeMillis(),
             lists = listOf(
-                BackupList(DEFAULT_TODO, ListKind.TODO, "随手待办", true, 1, 1),
-                BackupList(DEFAULT_SHOPPING, ListKind.SHOPPING, "日常采购", true, 1, 1),
-                BackupList(newListId, ListKind.TODO, "新清单", false, 1, 1)
+                BackupList(DEFAULT_TODO, "TODO", "随手待办", true, 1, 1),
+                BackupList(newListId, "TODO", "新清单", false, 1, 1)
             ),
             items = listOf(
-                BackupItem(UUID.randomUUID().toString(), newListId, "合法记录", "", null, null,
+                BackupItem(UUID.randomUUID().toString(), newListId, "合法记录", "",
                     false, false, 1024, 1, 1, null),
                 BackupItem(UUID.randomUUID().toString(), UUID.randomUUID().toString(), "悬空记录", "",
-                    null, null, false, false, 2048, 1, 1, null)
+                    false, false, 2048, 1, 1, null)
             )
         )
         assertTrue(runCatching { backup.merge(dangling) }.exceptionOrNull() is BackupException)

@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.RemoteViews
 import com.wanglemai.app.R
 import com.wanglemai.app.domain.Item
-import com.wanglemai.app.domain.ListKind
 import com.wanglemai.app.domain.TaskList
 import com.wanglemai.app.domain.UndoToken
 
@@ -56,9 +55,7 @@ class WidgetRenderer(private val context: Context) {
         val visibleRows = rows.take(layout.capacity)
         val emptyText = when {
             totalActive > 0 -> "空间较小 · 打开查看全部"
-            completedCount > 0 && list.kind == ListKind.SHOPPING -> "都买齐了 · 再记一条"
             completedCount > 0 -> "都完成了 · 再记一条"
-            list.kind == ListKind.SHOPPING -> "还没要买的，记一条"
             else -> "清单空空，想到就记"
         }
         showEmpty(views, layout, visibleRows.isEmpty(), emptyText)
@@ -78,16 +75,8 @@ class WidgetRenderer(private val context: Context) {
             row.setImageViewResource(R.id.row_check_icon, palette.checkIcon)
             row.setInt(R.id.row_pin, "setColorFilter", palette.secondary)
             row.setViewVisibility(R.id.row_pin, if (item.pinned) View.VISIBLE else View.GONE)
-            val quantity = listOfNotNull(item.quantityDecimal, item.unit).joinToString(" ")
-            row.setTextViewText(R.id.row_quantity, quantity)
-            row.setTextColor(R.id.row_quantity, palette.secondary)
-            row.setInt(R.id.row_quantity, "setMaxWidth", layout.quantityWidth)
-            row.setViewVisibility(R.id.row_quantity,
-                if (quantity.isNotEmpty() && layout.quantityWidth > 0) View.VISIBLE else View.GONE)
-            val actionLabel = if (list.kind == ListKind.SHOPPING) "已购买" else "已完成"
-            row.setContentDescription(R.id.row_check, "标记『${item.title}』为$actionLabel")
-            val description = item.title + (if (item.pinned) "，已置顶" else "") +
-                (if (quantity.isNotEmpty()) "，数量 $quantity" else "")
+            row.setContentDescription(R.id.row_check, "标记『${item.title}』为已完成")
+            val description = item.title + (if (item.pinned) "，已置顶" else "")
             row.setContentDescription(R.id.row_title, description)
             bind(row, R.id.row_check, intents?.complete?.invoke(item))
             bind(row, R.id.row_title, intents?.edit?.invoke(item))

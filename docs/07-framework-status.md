@@ -5,9 +5,9 @@
 ## 已实现的源码
 
 - 单 app 模块，Kotlin/Compose Material3 + Room/KSP + Coroutines/StateFlow，手动 AppContainer；除用户手动触发 GitHub Release 检查与更新包下载外无网络层；无 Hilt、WorkManager 或服务端。
-- Room v1：清单、记录、小部件配置、撤销、提交防重、草稿、偏好；无破坏性迁移。两个默认清单初始化幂等。
-- 领域校验：标题/备注 Unicode 码点限制、数量 BigDecimal、清单名 1～20 码点且同类忽略大小写不重名、批量 50 条原始行号。
-- 记录：新增/编辑/软删除、置顶、固定排序、跨清单移动（移到待办清除数量/单位并确认）、完成/恢复、版本条件更新、App 5 秒撤销、Widget 撤销。
+- Room v2（v0.4.0）：清单、记录、小部件配置、撤销、提交防重、草稿、偏好；v1→v2 迁移（移除待买类型与数量/单位列，待买记录并入随手待办）。默认清单初始化幂等。
+- 领域校验：标题/备注 Unicode 码点限制、清单名 1～20 码点且忽略大小写全局不重名、批量 50 条原始行号。
+- 记录：新增/编辑/软删除、置顶、固定排序、跨清单移动、完成/恢复、版本条件更新、App 5 秒撤销、Widget 撤销。
 - 自定义清单：新建、重命名、删除迁移；删除事务迁移全部记录（含软删除）、重绑小部件、清理撤销、迁移/保留草稿。
 - 批量：CRLF/LF、trim、忽略空行、1～50 条、错误行号、整批事务、commandId 防重。
 - 草稿：`create:{listId}` / `edit:{itemId}`，300ms debounce、onStop 补写、恢复/丢弃、版本冲突提示、保存成功清除；写盘带 epoch 防旧草稿覆盖。
@@ -16,7 +16,7 @@
 - 快速编辑：独立 `QuickEntryActivity`，底部面板样式，自动聚焦并请求 IME，返回优先收键盘，Back/取消保留草稿，键盘不遮挡保存。
 - Widget：标准/大号两个 Provider，XML RemoteViews；暖调半透明玻璃底色（浅色奶油 92% / 深色暖棕 94%，1dp 顶部高光 + 1dp 描边，24dp 圆角，无实时模糊）；每实例 listId/theme/density；多实例独立；尺寸/字体缩放计算行数（极小尺寸折叠为标题+页脚入口）；完成、撤销、冲突页脚、空态/错误态；写入后主动刷新。
 - 交互链路：Widget 新增/正文/标题直接 `PendingIntent.getActivity`；完成通过内部 Receiver（`goAsync`）执行，不使用 Activity trampoline、Service 或常驻后台服务。
-- SAF：5MB 流式上限、严格 schemaVersion/app/字段/引用/数量校验、预览不写库、确认时事务内重新校验、同 ID 保留、名称冲突加后缀、失败整体回滚；导出不含草稿/Widget ID/设备设置。
+- SAF：5MB 流式上限、严格 schemaVersion/app/字段/引用校验、预览不写库、确认时事务内重新校验、同 ID 保留、名称冲突加后缀、失败整体回滚；旧版备份中的待买清单导入时并入随手待办；导出不含草稿/Widget ID/设备设置。
 - 主题：应用主题跟随系统或显式浅/深；Widget 每实例 SYSTEM/LIGHT/DARK。SYSTEM 在进程存活时响应配置变化重绘，宿主缓存仍需真机复核。
 
 ## 工具链（固定版本）

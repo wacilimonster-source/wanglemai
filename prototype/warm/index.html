@@ -3,55 +3,164 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>忘了没 · 暖米色视觉提案</title>
+  <title>忘了没 · 手账美学与铅字纸感提案 (v0.4.0 Editorial Edition)</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Subtle SVG paper grain overlay for tactile warmth -->
+  <svg class="grain-svg" aria-hidden="true">
+    <filter id="paper-grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.22  0 0 0 0 0.18  0 0 0 0 0.14  0 0 0 0.032 0"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#paper-grain)"/>
+  </svg>
+
   <header class="masthead">
-    <a class="brand" href="index.html"><span class="brand-mark">✓</span>忘了没<span class="brand-en">a little room for life</span></a>
-    <span class="edition">VISUAL STUDY　/　02　·　2026.11</span>
-    <button class="quiet" id="theme">夜间预览</button>
+    <a class="brand" href="index.html">
+      <span class="brand-mark"><span>✓</span></span>
+      <span class="brand-title">忘了没</span>
+      <span class="brand-divider">/</span>
+      <span class="brand-en">TACTILE JOURNAL · V0.4.0</span>
+    </a>
+    <div class="masthead-center">
+      <span class="edition-tag">ISSUE 03</span>
+      <span class="edition">HOBONICHI &amp; EDITORIAL PAPER CRAFT</span>
+    </div>
+    <div class="masthead-actions">
+      <button class="quiet" id="theme"><span>☾</span> 夜间预览</button>
+    </div>
   </header>
+
   <main class="board">
     <aside class="introduction">
-      <p class="eyebrow">把生活，轻轻记住</p>
-      <h1>小事有处放，<br>心里就有光。</h1>
-      <p class="lead">一份温柔的清单，<br>装下日常，也留一点空白。</p>
+      <div class="editorial-stamp">
+        <span class="stamp-num">NO. 04</span>
+        <span class="stamp-sep">✦</span>
+        <span class="stamp-label">纸感手账高定版</span>
+      </div>
+
+      <h1>小事落纸上，<br><em>心事便轻了。</em></h1>
+      <p class="lead">以铅字排印、活页索引耳与道林纸边距线，<br>重构一册有呼吸感、有物化温度的随身待办手账。</p>
+
       <nav class="scenes" aria-label="原型页面">
-        <button class="selected" data-scene="todo"><span>01</span> 随手待办 <span>↗</span></button>
-        <button data-scene="shopping"><span>02</span> 日常采购 <span>↗</span></button>
-        <button data-scene="editor"><span>03</span> 快速记录 <span>↗</span></button>
-        <button data-scene="config"><span>04</span> 小部件配置 <span>↗</span></button>
-        <button data-scene="settings"><span>05</span> 设置 <span>↗</span></button>
+        <button class="selected" data-scene="todo"><span>01</span> 活页手账 · 主页 <span>↗</span></button>
+        <button data-scene="editor"><span>02</span> 点阵便签 · 撕页快记 <span>↗</span></button>
+        <button data-scene="manage"><span>03</span> 书签目录 · 管理清单 <span>↗</span></button>
+        <button data-scene="config"><span>04</span> 玻璃卡片 · 三档密度 <span>↗</span></button>
+        <button data-scene="settings"><span>05</span> 印记空间 · 应用设置 <span>↗</span></button>
       </nav>
-      <div class="palette" aria-label="暖米色配色"><span style="--swatch:#F6F1E8"></span><span style="--swatch:#FFFBF4"></span><span style="--swatch:#E8DDCB"></span><span style="--swatch:#8A5335"></span><span style="--swatch:#383129"></span></div>
-      <p class="tiny">奶油底色 / 磨砂玻璃 / 焦糖点缀</p>
-      <p class="board-note">可点击勾选、搜索与新增。<br>演示数据仅保留在本次页面会话。</p>
+
+      <div class="craft-notes" aria-label="设计语言解剖">
+        <div class="craft-item">
+          <span class="craft-idx">I.</span>
+          <div>
+            <b>阶梯活页索引耳 (Index Tabs)</b>
+            <span>选中分册与下方道林纸页无缝咬合，告别平庸胶囊堆砌</span>
+          </div>
+        </div>
+        <div class="craft-item">
+          <span class="craft-idx">II.</span>
+          <div>
+            <b>朱砂手账竖线与三层叠纸</b>
+            <span>贯穿左侧 1px 装订红线、余白横格线与错位叠纸投影</span>
+          </div>
+        </div>
+        <div class="craft-item">
+          <span class="craft-idx">III.</span>
+          <div>
+            <b>不对称钢笔铭牌岛 &amp; 齿孔便签</b>
+            <span>深烘黑巧悬浮岛 + 邮票齿孔撕边与点阵暗纹直写便签</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="palette-strip" aria-label="纸感色卡">
+        <div class="swatch-group">
+          <div class="swatch-card" title="亚麻原浆 #F3EDE2">
+            <span class="swatch-color" style="--swatch:#F3EDE2"></span>
+            <small>亚麻</small>
+          </div>
+          <div class="swatch-card" title="道林暖白 #FFFDF9">
+            <span class="swatch-color" style="--swatch:#FFFDF9"></span>
+            <small>道林</small>
+          </div>
+          <div class="swatch-card" title="牛皮索引 #E8DEC8">
+            <span class="swatch-color" style="--swatch:#E8DEC8"></span>
+            <small>牛皮</small>
+          </div>
+          <div class="swatch-card" title="焦糖朱砂 #9A4B26">
+            <span class="swatch-color" style="--swatch:#9A4B26"></span>
+            <small>朱砂</small>
+          </div>
+          <div class="swatch-card" title="深烘炭墨 #28211B">
+            <span class="swatch-color" style="--swatch:#28211B"></span>
+            <small>炭墨</small>
+          </div>
+        </div>
+        <span class="tiny">TAKEO PAPER SPEC · 亚麻原浆 / 道林纸白 / 焦糖朱砂 / 深烘炭墨</span>
+      </div>
     </aside>
+
     <section class="app-preview" aria-label="App 交互原型">
-      <div class="preview-label"><span>THE APP</span><span>01 / 日常的一页</span></div>
-      <div class="phone">
-        <div class="statusbar"><span>9:41</span><span class="camera"></span><span>▴ ▴ ▰</span></div>
+      <div class="preview-label"><span>FIG. 01 — THE JOURNAL APP</span><span>376 × 798 DP · EDGE TO EDGE</span></div>
+      <div class="phone" id="phone">
+        <div class="statusbar">
+          <span class="status-time">9:41</span>
+          <span class="camera" aria-hidden="true"></span>
+          <span class="status-icons" aria-label="状态栏信号与电量">
+            <svg viewBox="0 0 54 12" width="48" height="11" aria-hidden="true">
+              <rect x="1" y="7" width="2.5" height="4" rx="0.8" fill="currentColor"/>
+              <rect x="5" y="5.5" width="2.5" height="5.5" rx="0.8" fill="currentColor"/>
+              <rect x="9" y="3.5" width="2.5" height="7.5" rx="0.8" fill="currentColor"/>
+              <rect x="13" y="1.5" width="2.5" height="9.5" rx="0.8" fill="currentColor" opacity="0.35"/>
+              <path d="M21 4.2c2.2-1.8 5.2-1.8 7.4 0M22.6 6.5c1.3-1.1 3.1-1.1 4.4 0M24.8 8.8h.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+              <rect x="33" y="2" width="16" height="8" rx="2.2" stroke="currentColor" stroke-width="1.1" fill="none" opacity="0.75"/>
+              <rect x="34.8" y="3.6" width="11.5" height="4.8" rx="1" fill="currentColor"/>
+              <path d="M50.5 4.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+            </svg>
+          </span>
+        </div>
         <div id="app"></div>
-        <div class="home-indicator"></div>
+        <div class="home-indicator" aria-hidden="true"></div>
         <div id="toast" role="status" aria-live="polite"></div>
         <dialog id="editor" aria-labelledby="editor-heading"></dialog>
       </div>
-      <p class="caption">少一点打扰，多一点从容。</p>
+      <p class="caption">✦ 每一行待办，都像铅字印在温润的道林纸上 ✦</p>
     </section>
+
     <section class="widget-preview" aria-label="桌面小部件预览">
-      <div class="preview-label"><span>ON YOUR DESK</span><span>02 / 一眼就记得</span></div>
+      <div class="preview-label"><span>FIG. 02 — ON YOUR DESKTOP</span><span>GLASS &amp; PAPER WIDGETS</span></div>
       <div class="wallpaper" id="wallpaper">
-        <div class="desktop-date">星期六 · 十一月七日</div>
+        <div class="wallpaper-dapple" aria-hidden="true"></div>
+        <div class="desktop-statusbar" aria-hidden="true">
+          <span>SUN · 14°C</span>
+          <span>5G · 92%</span>
+        </div>
+        <div class="desktop-date">NOV 15 · SUNDAY</div>
         <div class="desktop-time">09:41</div>
         <div id="widgets"></div>
-        <span class="wallpaper-signature">a softer kind of everyday.</span>
+        <div class="desktop-footer" aria-hidden="true">
+          <div class="launcher-dots">
+            <span class="active"></span><span></span><span></span>
+          </div>
+          <span class="wallpaper-signature">a softer kind of everyday.</span>
+        </div>
       </div>
-      <div class="material-controls"><button class="quiet" id="wall">切换深色壁纸</button><button class="quiet" id="material" aria-pressed="false">查看原生近似</button></div>
-      <p class="tiny material-note" id="material-note">设计目标 · 背景模糊 24px + 浅米色透光层</p>
+      <div class="material-controls">
+        <button class="quiet" id="wall">切换深色壁纸</button>
+        <button class="quiet" id="material" aria-pressed="false">查看原生近似</button>
+      </div>
+      <p class="tiny material-note" id="material-note">设计目标 · 背景模糊 24px + 浅米透光层 + 顶部边缘高光</p>
     </section>
   </main>
-  <footer><span>忘了没　/　暖米色视觉提案</span><span>APP · WIDGET · DESIGN HANDOFF</span><button class="quiet" id="reset">重置演示</button></footer>
+
+  <footer>
+    <span>忘了没　/　EDITORIAL &amp; TACTILE NOTEBOOK PROTOTYPE</span>
+    <span>V0.4.0 · DESIGN DIRECTION A+</span>
+    <button class="quiet" id="reset">重置演示数据</button>
+  </footer>
+
   <script src="app.js"></script>
 </body>
 </html>

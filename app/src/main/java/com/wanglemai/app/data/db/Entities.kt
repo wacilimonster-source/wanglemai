@@ -3,20 +3,20 @@ package com.wanglemai.app.data.db
 import androidx.room.*
 import com.wanglemai.app.domain.*
 
-@Entity(tableName = "lists", indices = [Index(value = ["kind", "normalizedName"], unique = true)])
-data class ListEntity(@PrimaryKey val id: String, val kind: String, val name: String,
+@Entity(tableName = "lists", indices = [Index(value = ["normalizedName"], unique = true)])
+data class ListEntity(@PrimaryKey val id: String, val name: String,
     val normalizedName: String, val isDefault: Boolean, val createdAt: Long,
     val updatedAt: Long, val version: Long = 1) {
-    fun model() = TaskList(id, name, ListKind.valueOf(kind), isDefault, createdAt, updatedAt, version)
+    fun model() = TaskList(id, name, isDefault, createdAt, updatedAt, version)
 }
 @Entity(tableName = "items", foreignKeys = [ForeignKey(entity = ListEntity::class,
     parentColumns = ["id"], childColumns = ["listId"], onDelete = ForeignKey.RESTRICT)],
     indices = [Index(value = ["listId", "deletedAt", "completed", "pinned", "sortKey"]), Index(value = ["listId", "completedAt"])])
 data class ItemEntity(@PrimaryKey val id: String, val listId: String, val title: String,
-    val note: String, val quantityDecimal: String?, val unit: String?, val completed: Boolean,
+    val note: String, val completed: Boolean,
     val pinned: Boolean, val sortKey: Long, val createdAt: Long, val updatedAt: Long,
     val completedAt: Long? = null, val deletedAt: Long? = null, val version: Long = 1) {
-    fun model() = Item(id, listId, title, note, quantityDecimal, unit, completed, pinned,
+    fun model() = Item(id, listId, title, note, completed, pinned,
         sortKey, createdAt, updatedAt, completedAt, version)
 }
 @Entity(tableName = "widget_configs", foreignKeys = [ForeignKey(entity = ListEntity::class,

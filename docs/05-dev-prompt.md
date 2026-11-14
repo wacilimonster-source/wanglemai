@@ -8,7 +8,7 @@
 
 使用 Kotlin + Jetpack Compose/Material3 + Room + Coroutines/StateFlow。桌面 Widget 用 AppWidgetProvider + XML RemoteViews。applicationId 暂定 com.wanglemai.app，minSdk26、compile/targetSdk36；搭建时核验并固定相容的稳定依赖，提供 Gradle Wrapper。MVP 使用标准 Android Widget，在应用默认进程实现，不依赖小米小部件中心审核，不接入专有独立进程。无登录、云同步、提醒、AI、网络后台服务或悬浮窗，不申请无关权限。
 
-必须实现：两种类型清单及不可删除的默认清单、记录新增编辑软删除、置顶和固定排序、待买数量单位、最多50条的原子批量录入、字面搜索、完成恢复与版本安全撤销、草稿恢复、新建重命名删除清单并迁移记录、两种尺寸Widget、多实例独立绑定和配置、浅深色主题、SAF JSON备份及合并恢复。
+必须实现：单一待办类型清单及不可删除的默认清单、记录新增编辑软删除、置顶和固定排序、最多50条的原子批量录入、字面搜索、完成恢复与版本安全撤销、草稿恢复、新建重命名删除清单并迁移记录、两种尺寸Widget、多实例独立绑定和配置、浅深色主题、SAF JSON备份及合并恢复。
 
 Android Widget 不支持普通 EditText。新增和正文点击必须通过 PendingIntent.getActivity 直接进入 QuickEntryActivity；自动聚焦输入，保存成功后返回原桌面，勾选在Widget内执行。不要用Receiver/Service间接启动编辑页。所有界面共用Room业务数据；写入后显式刷新受影响的全部Widget，不能依赖定时轮询。使用expectedVersion条件更新、防重commandId、事务批量、错误保留输入，遵守文档的撤销和备份协议。
 

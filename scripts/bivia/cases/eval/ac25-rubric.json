@@ -1,0 +1,18 @@
+{
+  "cases": [
+    {
+      "id": "ac25-storage-failure",
+      "type": "choice",
+      "domain": "Android acceptance evidence grading",
+      "question": "该验收项当前证据等级是什么？",
+      "choices": [
+        "已覆盖且有证据",
+        "已实现但证据不足",
+        "未覆盖",
+        "不适用"
+      ],
+      "expected": "未覆盖",
+      "state": "验收项：AC25 模拟数据库写入失败/空间不足。\n判定标准：不关闭编辑、不显示已保存、不丢原内容；重试可用。\n现有证据：未做存储写满/IO 故障注入；编辑失败保留输入由 validation UI 测试覆盖，真实 StorageError 未测。\n\n判定口径：\n- 未覆盖：该场景从未执行，也没有针对性验证。\n- 已实现但证据不足：有实现或部分验证，但缺少关键证据。"
+    }
+  ]
+}

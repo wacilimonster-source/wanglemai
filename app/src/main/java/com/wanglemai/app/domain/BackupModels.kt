@@ -6,9 +6,13 @@ const val BACKUP_MAX_BYTES = 5 * 1024 * 1024
 const val BACKUP_MAX_LISTS = 100
 const val BACKUP_MAX_ITEMS = 10000
 
+/** Legacy v0.3.x default shopping list id; referenced only when importing old backups. */
+const val DEFAULT_SHOPPING = "list-shopping-default"
+
+/** Legacy backups before v0.4.0 carried `kind: "TODO" | "SHOPPING"`; kept only for import conversion. */
 data class BackupList(
     val id: String,
-    val kind: ListKind,
+    val kind: String?,
     val name: String,
     val isDefault: Boolean,
     val createdAt: Long,
@@ -20,8 +24,6 @@ data class BackupItem(
     val listId: String,
     val title: String,
     val note: String,
-    val quantityDecimal: String?,
-    val unit: String?,
     val completed: Boolean,
     val pinned: Boolean,
     val sortKey: Long,

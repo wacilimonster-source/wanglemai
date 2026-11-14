@@ -10,8 +10,8 @@ android {
         applicationId = "com.wanglemai.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.3.5-mvp"
+        versionCode = 11
+        versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
@@ -23,6 +23,10 @@ android {
     kotlinOptions { jvmTarget = "17" }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     testOptions { unitTests.isReturnDefaultValues = true }
+    sourceSets {
+        // Room schema JSONs must ship as androidTest assets for MigrationTestHelper.
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
 }
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 dependencies {
@@ -44,5 +48,6 @@ dependencies {
     androidTestImplementation(libs.android.test.runner)
     androidTestImplementation(libs.android.test.junit)
     androidTestImplementation(libs.android.test.rules)
+    androidTestImplementation(libs.room.testing)
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 }

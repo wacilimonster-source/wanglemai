@@ -1,0 +1,31 @@
+{
+  "cases": [
+    {
+      "id": "fact-1-write-draft-epoch",
+      "type": "choice",
+      "domain": "Android Kotlin code comprehension",
+      "question": "writeDraft 是否在 draftMutex 内校验 epoch != draftEpoch？",
+      "choices": ["是，校验后拒绝过期任务", "否，没有 epoch 校验", "给出的代码不足以判断"],
+      "expected": "是，校验后拒绝过期任务",
+      "state": "当前代码：\nprivate suspend fun writeDraft(snapshot: EditorUiState, epoch: Long) {\n    draftMutex.withLock {\n        if (epoch != draftEpoch) return\n        ...\n    }\n}\n调用方在启动异步写盘前读取 val epoch = draftEpoch。"
+    },
+    {
+      "id": "fact-2-sortkey-check-order",
+      "type": "choice",
+      "domain": "Android Kotlin code comprehension",
+      "question": "当 sortKey == Long.MAX_VALUE-1023 时，这段代码会先检查还是先加法？",
+      "choices": ["先检查，条件为 sortKey > MAX-1024，因此抛出", "先加法，然后溢出为负数", "给出的代码不足以判断"],
+      "expected": "先检查，条件为 sortKey > MAX-1024，因此抛出",
+      "state": "当前代码：\nvar sortKey = dao.maxSortKey(input.listId)\nval entities = normalized.map { item ->\n    if (sortKey > Long.MAX_VALUE - 1024) throw ValidationException(\"清单排序已满，请新建清单\")\n    sortKey += 1024\n    ItemEntity(...)\n}"
+    },
+    {
+      "id": "fact-3-widget-refresh-order",
+      "type": "choice",
+      "domain": "Android Kotlin code comprehension",
+      "question": "refresh(widgetId) 是否在 renderLocked(widgetId) 之前移除 transientMessages 中该 widget 的提示？",
+      "choices": ["是，先 remove 再 render", "否，先 render 再 remove", "给出的代码不足以判断"],
+      "expected": "是，先 remove 再 render",
+      "state": "当前代码：\nsuspend fun refresh(widgetId: Int) = mutex.withLock {\n    transientMessages.remove(widgetId)\n    renderLocked(widgetId)\n}"
+    }
+  ]
+}

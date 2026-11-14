@@ -9,8 +9,6 @@ object DraftCodec {
         .put("listId", draft.listId)
         .put("title", draft.title)
         .put("note", draft.note)
-        .put("quantityDecimal", draft.quantity)
-        .put("unit", draft.unit)
         .put("pinned", draft.pinned)
         .put("batchMode", draft.batch)
         .toString()
@@ -24,8 +22,6 @@ object DraftCodec {
                 listId = listId,
                 title = json.optString("title"),
                 note = json.optString("note"),
-                quantity = json.optString("quantityDecimal"),
-                unit = json.optString("unit"),
                 pinned = json.optBoolean("pinned", false),
                 batch = json.optBoolean("batchMode", false),
                 baseItemVersion = entity.baseItemVersion

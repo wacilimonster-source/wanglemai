@@ -27,8 +27,9 @@ class FrameworkUiTest {
     private val device = UiDevice.getInstance(instrumentation)
     private val container get() = context.app.container
 
-    private fun find(text: String): UiObject2 = device.wait(Until.findObject(By.text(text)), 10_000)
-        ?: error("Cannot find UI text: $text")
+    private fun find(text: String): UiObject2 = device.wait(Until.findObject(By.text(text)), 8_000)
+        ?: device.wait(Until.findObject(By.desc(text)), 2_000)
+        ?: error("Cannot find UI text or desc: $text")
     private fun focusedEditor(): UiObject2 =
         device.wait(Until.findObject(By.clazz("android.widget.EditText").focused(true)), 10_000)
             ?: error("Cannot find focused editor field")
@@ -75,14 +76,12 @@ class FrameworkUiTest {
     }
     private suspend fun resetSelection() {
         container.repository.initialize()
-        container.repository.setPreference(PREF_LAST_KIND, ListKind.TODO.name)
-        container.repository.setPreference(PREF_LAST_LIST_TODO, DEFAULT_TODO)
-        container.repository.setPreference(PREF_LAST_LIST_SHOPPING, DEFAULT_SHOPPING)
+        container.repository.setPreference(PREF_LAST_LIST, DEFAULT_TODO)
     }
     private fun awaitEditorClosed() {
         awaitCondition {
-            device.findObjects(By.text("想到，就记一条。")).isEmpty() &&
-                device.findObjects(By.text("编辑这一条")).isEmpty()
+            device.findObjects(By.text("想到，就落笔。")).isEmpty() &&
+                device.findObjects(By.text("修订这页便签")).isEmpty()
         }
     }
     private suspend fun deleteBySearch(listId: String, query: String) {
@@ -104,23 +103,23 @@ class FrameworkUiTest {
         val stamp = System.currentTimeMillis()
         val title = "基础框架验证$stamp"
         val listName = "独立验证$stamp"
-        val listId = (container.repository.createList(ListKind.TODO, listName)
+        val listId = (container.repository.createList(listName)
             as MutationResult.Success).itemIds.single()
         val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java)
             .putExtra("list_id", listId))
         try {
             assertNotNull(device.wait(Until.findObject(By.textContains(listName)), 10_000))
             tap("＋ 记一条")
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             focusedEditor().text = title
-            tap("保存")
+            tap("入册保存")
             awaitEditorClosed()
             val record = device.wait(Until.findObject(By.descStartsWith(title)), 10_000)
                 ?: error("Cannot find saved record")
             record.click()
-            find("编辑这一条")
+            find("修订这页便签")
             focusedEditor().text = "$title 已修改"
-            tap("保存修改")
+            tap("保存修订")
             awaitEditorClosed()
             awaitRepo {
                 container.repository.observeItems(listId, false, title).first()
@@ -150,7 +149,7 @@ class FrameworkUiTest {
         val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java))
         try {
             tap("＋ 记一条")
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             tap("每行生成一条")
             find("每行一条")
             val titleField = focusedEditor()
@@ -159,13 +158,13 @@ class FrameworkUiTest {
             device.executeShellCommand("input keyevent 66")
             device.executeShellCommand("input text $second")
             find("将生成 2 条")
-            tap("保存")
+            tap("入册保存")
             awaitRepo {
                 container.repository.observeItems(DEFAULT_TODO, false, first).first().size == 1 &&
                     container.repository.observeItems(DEFAULT_TODO, false, second).first().size == 1
             }
             tap("＋ 记一条")
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             focusedEditor().text = draftTitle
             Thread.sleep(700)
             tap("取消")
@@ -173,7 +172,7 @@ class FrameworkUiTest {
                 container.repository.getDraft("create:$DEFAULT_TODO")?.title == draftTitle
             }
             tap("＋ 记一条")
-            find("已恢复上次草稿")
+            find("已恢复上次未保存的草稿")
             tap("丢弃")
             awaitRepo { container.repository.getDraft("create:$DEFAULT_TODO") == null }
             tap("取消")
@@ -197,22 +196,22 @@ class FrameworkUiTest {
         val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java))
         try {
             tap("管理清单")
-            tap("＋ 新建待办 清单")
+            tap("＋ 新建清单")
             focusedEditor().text = listName
             tap("保存")
             awaitRepo { container.repository.lists().any { it.name == listName } }
             find(listName)
             createdListId = container.repository.lists().first { it.name == listName }.id
-            tap("← 返回清单")
+            tap("← 返回手账")
 
             tap("＋ 记一条")
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             focusedEditor().text = itemTitle
-            tap("保存")
+            tap("入册保存")
             find(itemTitle)
 
             tap("管理清单")
-            find("＋ 新建待办 清单")
+            find("＋ 新建清单")
             device.findObjects(By.text("改名")).maxBy { it.visibleBounds.centerY() }.click()
             focusedEditor().text = renamed
             tap("保存")
@@ -223,7 +222,7 @@ class FrameworkUiTest {
             find("删除「$renamed」？")
             tap("删除并移动")
             awaitCondition { device.findObjects(By.text(renamed)).isEmpty() }
-            tap("← 返回清单")
+            tap("← 返回手账")
 
             awaitRepo { container.repository.observeItems(DEFAULT_TODO, false, itemTitle).first().isNotEmpty() }
             val migrated = container.repository.observeItems(DEFAULT_TODO, false, itemTitle).first().single()
@@ -252,56 +251,22 @@ class FrameworkUiTest {
         val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java))
         try {
             tap("＋ 记一条")
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             val field = focusedEditor()
             field.text = first
             tap("保存并继续")
             awaitRepo { container.repository.observeItems(DEFAULT_TODO, false, first).first().size == 1 }
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             val nextField = focusedEditor()
             assertEquals("", nextField.text)
             nextField.text = second
-            tap("保存")
+            tap("入册保存")
             awaitRepo { container.repository.observeItems(DEFAULT_TODO, false, second).first().size == 1 }
             awaitEditorClosed()
         } finally {
             scenario.close()
             deleteBySearch(DEFAULT_TODO, first)
             deleteBySearch(DEFAULT_TODO, second)
-        }
-        Unit
-    }
-
-    @Test fun movingShoppingItemToTodoAsksBeforeClearingQuantity() = runBlocking {
-        val stamp = System.currentTimeMillis()
-        val title = "移动验证$stamp"
-        val created = container.repository.create(ItemInput(DEFAULT_SHOPPING, title,
-            note = "保留备注", quantity = "2", unit = "盒"), UUID.randomUUID().toString())
-            as MutationResult.Success
-        val itemId = created.itemIds.single()
-        val scenario = ActivityScenario.launch<com.wanglemai.app.ui.editor.QuickEntryActivity>(
-            com.wanglemai.app.ui.editor.QuickEntryActivity.editIntent(context, itemId))
-        try {
-            find("编辑这一条")
-            val picker = device.findObject(By.textContains("待买 · 日常采购"))
-            assertNotNull(picker)
-            picker.click()
-            tap("待办 · 随手待办")
-            device.wait(Until.findObject(By.text("待办 · 随手待办  ▾")), 10_000)
-            tap("保存修改")
-            find("移到待办清单？")
-            tap("移动并保存")
-            awaitRepo {
-                val item = container.repository.getItem(itemId)
-                item != null && item.listId == DEFAULT_TODO && item.quantityDecimal == null &&
-                    item.unit == null && item.note == "保留备注"
-            }
-            awaitEditorClosed()
-        } finally {
-            scenario.close()
-            container.repository.getItem(itemId)?.let {
-                container.repository.delete(it.id, it.version)
-            }
         }
         Unit
     }
@@ -317,14 +282,14 @@ class FrameworkUiTest {
         val scenario = ActivityScenario.launch<com.wanglemai.app.ui.editor.QuickEntryActivity>(
             com.wanglemai.app.ui.editor.QuickEntryActivity.editIntent(context, itemId))
         try {
-            find("编辑这一条")
+            find("修订这页便签")
             val field = focusedEditor()
             field.text = draftTitle
             Thread.sleep(600)
             val latest = container.repository.getItem(itemId)!!
             container.repository.update(latest.id, latest.version,
                 ItemInput(DEFAULT_TODO, externalTitle))
-            tap("保存修改")
+            tap("保存修订")
             find("这条记录已在别处更新，你的草稿已保留。")
             assertNotNull(device.findObject(By.text(draftTitle)))
             tap("载入最新记录")
@@ -348,10 +313,10 @@ class FrameworkUiTest {
         val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java))
         try {
             tap("＋ 记一条")
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             val field = focusedEditor()
             field.text = tooLong
-            tap("保存")
+            tap("入册保存")
             find("标题最多 200 字符")
             assertNotNull(device.findObject(By.text(tooLong)))
             tap("取消")
@@ -369,7 +334,7 @@ class FrameworkUiTest {
         val createScenario = ActivityScenario.launch<QuickEntryActivity>(
             QuickEntryActivity.createIntent(context, DEFAULT_TODO))
         try {
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             assertTrue("Create should show the keyboard", waitForIme(createScenario, true))
         } finally {
             createScenario.close()
@@ -382,7 +347,7 @@ class FrameworkUiTest {
         val editScenario = ActivityScenario.launch<QuickEntryActivity>(
             QuickEntryActivity.editIntent(context, itemId))
         try {
-            find("编辑这一条")
+            find("修订这页便签")
             Thread.sleep(800)
             var visible = false
             editScenario.onActivity { visible = imeVisible(it) }
@@ -403,18 +368,18 @@ class FrameworkUiTest {
         val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java))
         try {
             tap("＋ 记一条")
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             focusedEditor().text = title
             Thread.sleep(700)
             device.pressBack()
             Thread.sleep(500)
             assertNotNull("First Back must hide IME, not close the editor",
-                device.findObject(By.text("想到，就记一条。")))
+                device.findObject(By.text("想到，就落笔。")))
             device.pressBack()
             awaitRepo { container.repository.getDraft("create:$DEFAULT_TODO")?.title == title }
             find("＋ 记一条")
             tap("＋ 记一条")
-            find("已恢复上次草稿")
+            find("已恢复上次未保存的草稿")
             tap("丢弃")
             awaitRepo { container.repository.getDraft("create:$DEFAULT_TODO") == null }
             tap("取消")
@@ -443,7 +408,7 @@ class FrameworkUiTest {
             awaitRepo { container.repository.getPreference(PREF_THEME) == ThemeMode.LIGHT.name }
             tap("深色")
             awaitRepo { container.repository.getPreference(PREF_THEME) == ThemeMode.DARK.name }
-            tap("待办")
+            tap("← 返回手账")
             val search = device.wait(Until.findObject(By.clazz("android.widget.EditText").enabled(true)), 10_000)
                 ?: error("Cannot find search field")
             search.text = "%_"
@@ -459,9 +424,16 @@ class FrameworkUiTest {
             if (android.os.Build.VERSION.SDK_INT >= 33) instrumentation.uiAutomation.clearCache()
             find(special)
             awaitCondition { device.findObjects(By.text(ordinary)).isEmpty() }
-            tap("待买")
-            tap("待办")
-            find("搜索这份清单…")
+            // The kind-switch tabs used to clear the search; clear it directly now.
+            val clearBtn = device.findObject(By.desc("清空搜索"))
+            if (clearBtn != null) {
+                clearBtn.click()
+            } else {
+                val field = device.wait(Until.findObject(By.clazz("android.widget.EditText").enabled(true)), 10_000)
+                    ?: error("Cannot find search field")
+                field.setText("")
+            }
+            find("检索本页…")
         } finally {
             scenario.close()
             listOf(specialId, ordinaryId).forEach {
@@ -504,16 +476,19 @@ class FrameworkUiTest {
     @Test fun smallAndLargeWidgetsKeepIndependentConfigurations() = runBlocking {
         resetSelection()
         val stamp = System.currentTimeMillis()
-        val customName = "大清单$stamp"
-        val customList = (container.repository.createList(ListKind.TODO, customName)
+        val smallName = "小卡清单$stamp"
+        val smallList = (container.repository.createList(smallName)
+            as MutationResult.Success).itemIds.single()
+        val largeName = "大清单$stamp"
+        val largeList = (container.repository.createList(largeName)
             as MutationResult.Success).itemIds.single()
         val todoTitles = (1..4).map { "大条目$stamp-$it" }
         todoTitles.forEach {
-            container.repository.create(ItemInput(customList, it), UUID.randomUUID().toString())
+            container.repository.create(ItemInput(largeList, it), UUID.randomUUID().toString())
         }
-        val shoppingTitle = "采购条目$stamp"
-        val shopping = (container.repository.create(
-            ItemInput(DEFAULT_SHOPPING, shoppingTitle, quantity = "1", unit = "件", pinned = true),
+        val pinnedTitle = "置顶条目$stamp"
+        val pinned = (container.repository.create(
+            ItemInput(smallList, pinnedTitle, pinned = true),
             UUID.randomUUID().toString()) as MutationResult.Success).itemIds.single()
 
         val userId = android.os.Process.myUid() / 100000
@@ -531,45 +506,43 @@ class FrameworkUiTest {
             assertTrue(smallId > 0 && largeId > 0)
             val dao = container.db.dao()
             dao.saveConfig(WidgetConfig(smallId, "com.wanglemai.app.widget.ListSmallProvider",
-                DEFAULT_SHOPPING, ThemeMode.DARK.name, WidgetDensity.COMPACT.name))
+                smallList, ThemeMode.DARK.name, WidgetDensity.COMPACT.name))
             dao.saveConfig(WidgetConfig(largeId, "com.wanglemai.app.widget.ListLargeProvider",
-                customList, ThemeMode.LIGHT.name, WidgetDensity.COMFORTABLE.name))
+                largeList, ThemeMode.LIGHT.name, WidgetDensity.COMFORTABLE.name))
             container.widgets.refresh(smallId)
             container.widgets.refresh(largeId)
 
-            awaitCondition { device.findObjects(By.text(shoppingTitle)).isNotEmpty() }
-            assertNotNull(device.findObject(By.text(customName)))
+            awaitCondition { device.findObjects(By.text(pinnedTitle)).isNotEmpty() }
+            assertNotNull(device.findObject(By.text(largeName)))
             awaitCondition { device.findObjects(By.text(todoTitles[3])).isNotEmpty() }
             device.takeScreenshot(java.io.File(context.getExternalFilesDir(null), "widget-translucent.png"))
 
-            val shoppingDescription = "标记『$shoppingTitle』为已购买"
-            assertNotNull(device.findObject(By.desc(shoppingDescription)))
-            device.findObject(By.desc(shoppingDescription)).click()
-            awaitRepo { container.repository.getItem(shopping)!!.completed }
+            val completionDescription = "标记『$pinnedTitle』为已完成"
+            assertNotNull(device.findObject(By.desc(completionDescription)))
+            device.findObject(By.desc(completionDescription)).click()
+            awaitRepo { container.repository.getItem(pinned)!!.completed }
             awaitCondition { device.findObjects(By.text("已完成 · 撤销")).size == 1 }
             tap("已完成 · 撤销")
-            awaitRepo { !container.repository.getItem(shopping)!!.completed }
+            awaitRepo { !container.repository.getItem(pinned)!!.completed }
             awaitCondition { device.findObjects(By.text("已完成 · 撤销")).isEmpty() }
 
             context.startActivity(Intent(context, WidgetConfigureActivity::class.java)
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, smallId)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             find("这张卡片，记什么？")
-            tap(customName)
-            UiScrollable(UiSelector().scrollable(true)).scrollIntoView(UiSelector().text("浅色"))
+            tap(largeName)
             tap("浅色")
-            UiScrollable(UiSelector().scrollable(true)).scrollIntoView(UiSelector().text("舒适"))
             tap("舒适")
             tap("保存并添加")
             awaitRepo {
                 val config = container.db.dao().config(smallId)
-                config?.listId == customList && config.theme == ThemeMode.LIGHT.name &&
+                config?.listId == largeList && config.theme == ThemeMode.LIGHT.name &&
                     config.density == WidgetDensity.COMFORTABLE.name
             }
             val largeConfig = container.db.dao().config(largeId)
             assertNotNull("small=$smallId large=$largeId configs=${container.db.dao().configs()}",
                 largeConfig)
-            assertEquals(customList, largeConfig!!.listId)
+            assertEquals(largeList, largeConfig!!.listId)
             assertEquals(ThemeMode.LIGHT.name, largeConfig.theme)
             assertEquals(WidgetDensity.COMFORTABLE.name, largeConfig.density)
         } finally {
@@ -579,10 +552,15 @@ class FrameworkUiTest {
             }
             runCatching { container.db.dao().deleteConfig(smallId) }
             runCatching { container.db.dao().deleteConfig(largeId) }
-            runCatching { deleteAllItems(customList) }
-            runCatching { deleteBySearch(DEFAULT_SHOPPING, shoppingTitle) }
+            runCatching { deleteAllItems(smallList) }
+            runCatching { deleteAllItems(largeList) }
             runCatching {
-                container.repository.list(customList)?.let {
+                container.repository.list(smallList)?.let {
+                    container.repository.deleteListAndMoveToDefault(it.id, it.version)
+                }
+            }
+            runCatching {
+                container.repository.list(largeList)?.let {
                     container.repository.deleteListAndMoveToDefault(it.id, it.version)
                 }
             }
@@ -622,7 +600,6 @@ class FrameworkUiTest {
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 find("这张卡片，记什么？")
                 if (exit == "save") {
-                    UiScrollable(UiSelector().scrollable(true)).scrollIntoView(UiSelector().text("超紧凑"))
                     tap("超紧凑")
                     tap("保存并添加")
                     awaitRepo { container.db.dao().config(widgetId)?.density == WidgetDensity.ULTRA_COMPACT.name }
@@ -647,7 +624,7 @@ class FrameworkUiTest {
         container.repository.initialize()
         val stamp = System.currentTimeMillis()
         val listName = "字号$stamp"
-        val listId = (container.repository.createList(ListKind.TODO, listName)
+        val listId = (container.repository.createList(listName)
             as MutationResult.Success).itemIds.single()
         val title = "字号验证$stamp"
         container.repository.create(ItemInput(listId, title), UUID.randomUUID().toString())
@@ -691,7 +668,7 @@ class FrameworkUiTest {
         container.repository.initialize()
         val stamp = System.currentTimeMillis()
         val listName = "组件清单$stamp"
-        val listId = (container.repository.createList(ListKind.TODO, listName)
+        val listId = (container.repository.createList(listName)
             as MutationResult.Success).itemIds.single()
         val title = "小部件验证$stamp"
         val created = container.repository.create(ItemInput(listId, title),
@@ -716,9 +693,9 @@ class FrameworkUiTest {
             awaitCondition { runBlocking { !container.repository.getItem(itemId)!!.completed } }
             awaitCondition { device.findObjects(By.text(title)).size == 2 }
             device.wait(Until.findObject(By.desc("新增一条${listName}记录")), 10_000).click()
-            find("想到，就记一条。")
+            find("想到，就落笔。")
             focusedEditor().text = "$title 快速新增"
-            tap("保存")
+            tap("入册保存")
             awaitCondition { device.findObjects(By.text("$title 快速新增")).size == 2 }
             val extra = container.repository.observeItems(listId, false, "$title 快速新增").first().single()
             container.mutate { container.repository.delete(extra.id, extra.version) }

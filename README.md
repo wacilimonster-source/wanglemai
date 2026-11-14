@@ -1,32 +1,38 @@
-# 忘了没 · Android MVP 交付 v0.3.5
+# 忘了没 · Android MVP 交付 v0.4.0
 
-日期：2026-11-10。状态：**原生 MVP 功能已实现并在 Android 14/API34 模拟器完成自动化验证**；模拟器 Launcher 已验证重启和覆盖安装后小部件恢复。澎湃 OS 3 真机普通桌面、API26/31/36、TalkBack 人工验收和性能目标仍未验证。已确认系统负一屏只接受小米小部件；因本项目不上架应用商店，小米小部件准入不成立，**负一屏取消开发**。
+日期：2026-11-15。状态：**v0.4.0 单一待办重构与活页手账视觉焕新已完成，并在 Android 16/API36 模拟器完成全部自动化验证与逐屏视觉比对**；模拟器 Launcher 已验证重启和覆盖安装后小部件恢复。澎湃 OS 3 真机普通桌面、API26/31、TalkBack 人工验收和性能目标仍未验证。已确认系统负一屏只接受小米小部件；因本项目不上架应用商店，小米小部件准入不成立，**负一屏取消开发**。
 
 ## 当前交付
 
 - GitHub 仓库：<https://github.com/wacilimonster-source/wanglemai>
 - GitHub Releases（检查更新使用）：<https://github.com/wacilimonster-source/wanglemai/releases>
 - 原生工程：`app/`，Kotlin + Jetpack Compose/Material3 + Room + Coroutines/StateFlow。
-- Debug APK：[wanglemai-0.3.5-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.3.5/wanglemai-0.3.5-debug.apk)（versionCode 10，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
-- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.3.5 APK SHA256 见 SHA256SUMS。
+- Debug APK：[wanglemai-0.4.0-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.4.0/wanglemai-0.4.0-debug.apk)（versionCode 11，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
+- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.4.0 APK SHA256 见 SHA256SUMS。
 - 实测记录：[开发记录](docs/development-log.md)、[验收记录](docs/03-acceptance.md)、[框架状态](docs/07-framework-status.md)。
-- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.3.5.txt)、[设备测试](docs/evidence/android-instrumentation-0.3.5.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.3.5.json)。
+- 自动化证据：[构建与 JVM](docs/evidence/android-build-0.3.5.txt)、[设备测试](docs/evidence/android-instrumentation-0.3.5.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.3.5.json)（v0.3.5 基准记录；v0.4.0 实测见 [开发记录](docs/development-log.md)）。
 
-## 本版改进（v0.3.5）
+## 本版改进（v0.4.0）
 
-- 小部件和主页面区分“全部完成”与“空清单”；待买使用独立文案与筛选计数。
+- **日式活页手账视觉焕新（Editorial Edition）**：参照 [prototype/warm/index.html](prototype/warm/index.html) 全面重构五屏 Compose UI 与 Widget 细节——道林暖白 / 深烘炭墨双色板、三层叠页卡片、朱砂双线日历印章、无缝衔接的阶梯活页索引耳、44dp 贯穿朱砂边线 + 45° 菱形复选框、点阵撕页快记、书签分册目录与 `EX LIBRIS` 藏书印记、桌面壁纸仿真小组件配置预览及罗马数字设置页。
+- 移除「待买」类型，只保留待办：底部导航、编辑器数量/单位、小部件数量列与相关文案全部删除。
+- 数据库 v1→v2 迁移：待买清单（含默认「日常采购」）删除，其中记录追加到「随手待办」末尾并清除数量/单位；绑定待买清单的小部件自动改绑「随手待办」；旧类型偏好键清理。
+- 备份兼容：仍可导入 v0.3.x 备份（旧待买清单按同一策略并入随手待办，数量/单位丢弃）；新导出的备份保留 `kind:"TODO"` 字段，旧版本 App 也能导入。
+- 清单重名检查从“同类型内”改为全局唯一（单一类型下行为一致）。
+
+## v0.3.5 改动
+
 - 编辑已有记录不再自动弹出键盘；新增记录和“保存并继续”保持自动聚焦。
 - 开机、覆盖安装、回到 App 时刷新小部件；选择器改用带示例记录的静态预览。
-- 不改数据模型；现有数据、草稿、清单绑定和小部件配置保持兼容。
 
 ## 已实现的产品能力
 
 v0.3.2小部件精修与验证见 [精修规格](docs/widget-refinement/design-spec.md#10-原生实现与验证--2026-11-07) 和 [原生验证记录](docs/widget-refinement/verification-0.3.2.json)，安装包位于 `app/build/outputs/apk/debug/app-debug.apk`。
 
-- 两种类型清单、两个不可删除的默认清单；自定义清单新建/重命名/删除，删除时把记录与草稿迁移到同类默认清单并重绑小部件。
-- 记录新增/编辑/软删除、置顶、固定排序、待买数量与单位、完成/恢复、5 秒进程内撤销、版本条件写入。
+- 单一待办类型、一个不可删除的默认清单「随手待办」；自定义清单新建/重命名/删除，删除时把记录与草稿迁移到默认清单并重绑小部件。
+- 记录新增/编辑/软删除、置顶、固定排序、完成/恢复、5 秒进程内撤销、版本条件写入。
 - 最多 50 条原子批量录入，按 CRLF/LF 拆分、忽略空行、错误指出原始行号、同 commandId 重试不重复写入。
-- 字面搜索（忽略英文大小写，`%`/`_` 不作通配符）、按清单/状态过滤、清单与类型切换记忆。
+- 字面搜索（忽略英文大小写，`%`/`_` 不作通配符）、按清单/状态过滤、清单切换记忆。
 - Room 长期草稿：300ms debounce、onStop 补写、草稿恢复/丢弃、编辑冲突不静默覆盖、保存成功才清除。
 - 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与舒适、紧凑、超紧凑三档密度。支持两排桌面高度，舒适按尺寸保留底栏，紧凑把操作收进标题栏，舒适/紧凑48dp、超紧凑36dp完成触区，按空间显示最多 12 条。暖调半透明玻璃底色采用浅色奶油 92% / 深色暖棕 90%、局部顶部高光和细描边，圆角跟随系统。配置预览复用真实 RemoteViews，保留多实例独立、刷新、完成撤销和错误反馈；空态区分“全部完成”与“空清单”，选择器使用带示例记录的静态预览，开机/覆盖安装/回到 App 时主动刷新。详见 [小部件精修规格](docs/widget-refinement/design-spec.md)。
 - 暖米色视觉体系（2026-11 提案 v1，见 docs/visual-refresh/）：奶油底 + 暖纸白内容面 + 焦糖棕主色，圆形完成控件、分段筛选、整宽新增入口、24dp 线性矢量图标；浅/深两套显式 token。
@@ -47,16 +53,18 @@ adb -s emulator-5554 install -r app\build\outputs\apk\androidTest\debug\app-debu
 adb -s emulator-5554 shell am instrument -w -r com.wanglemai.app.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-实际结果：JVM 68/68 通过；设备 46/46 完整重跑通过。首轮曾出现一次 `appCanCreateEditAndPersistRecord` 未在 10 秒内定位新记录的偶发失败，单例重跑与完整重跑均通过；不以首轮结果冒充全绿。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
+实际结果：JVM 67/67 通过；设备 47/47 完整重跑通过（API36 模拟器；v0.4.0 新增 `MigrationTest` 与旧备份导入用例）。首轮曾出现一次 `appCanCreateEditAndPersistRecord` 未在 10 秒内定位新记录的偶发失败，单例重跑与完整重跑均通过；不以首轮结果冒充全绿。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
 
-## 发布新版本
+## 发布新版本（GitHub Actions）
 
-1. 更新 `app/build.gradle.kts` 的 versionCode/versionName。
-2. 构建并复制 APK 到 `releases/`。
-3. 生成国内回退清单：`python scripts/update-manifest.py vX.Y.Z releases/wanglemai-X.Y.Z-debug.apk --release-name "忘了没 vX.Y.Z MVP"`。
-4. 提交、打 tag、推送，并在 GitHub 创建 Release，上传 APK 资产。
-5. 推送后清理 jsDelivr 分支缓存：`bash scripts/purge-jsdelivr-manifest.sh`；否则国内回退清单可能延迟更新。
-6. jsDelivr 静态清单使用 `@main`；APK 加速链接使用 tag，避免内容漂移。
+发版由 `.github/workflows/release.yml` 完成，不再在本机构建上传。一次性配置与排障见 [CI 发版说明](docs/ci-release.md)。
+
+1. （可选）写 `docs/release-notes-X.Y.Z.md`，Release 正文会优先采用；没有则使用 GitHub 自动生成的 notes。
+2. 打开 Actions → Release → Run workflow，填入 `version`（如 `0.4.0`）和可选 `release_name`；首次发布建议先勾选 `dry_run`，验证构建、测试和签名。
+3. 正式运行会自动：递增 versionCode、构建并跑 JVM 单测、校验签名证书、写入 APK 与 `releases/SHA256SUMS.txt`、生成 `update/latest.json`、提交 main、打 tag、创建 GitHub Release、清理 jsDelivr 清单缓存。
+4. 验证 Release 资产、`update/latest.json` 的 SHA256 与实际 APK 一致，`https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@vX.Y.Z/releases/wanglemai-X.Y.Z-debug.apk` 可下载，并用新 APK 覆盖安装旧版确认签名兼容。
+
+本地手工回退（Actions 不可用时）：改版本号 → `.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest` → 复制 APK 到 `releases/` → `python scripts/update-manifest.py ...` → 提交、打 tag → 手动创建 Release 并上传 APK → `bash scripts/purge-jsdelivr-manifest.sh`。jsDelivr 静态清单使用 `@main`，APK 加速链接使用 tag，避免内容漂移。
 
 ## 安装与添加小部件
 

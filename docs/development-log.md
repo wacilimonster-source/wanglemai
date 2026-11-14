@@ -1,5 +1,39 @@
 # Android 开发与交接记录
 
+## v0.4.0 · 活页手账视觉焕新与单一待办 / 2026-11-15
+
+在单一待办重构之上，参照同步精修后的 `prototype/warm`（v0.4.0 Editorial Edition）完成五屏原生界面与小部件视觉对齐：
+
+- **设计系统与基础组件**：`Theme.kt` 新增 `EditorialPalette`（道林暖白 / 深烘炭墨双色板）、`EditorialSerif` 与 `EditorialMono`；新增 `EditorialComponents.kt` 提供 Hobonichi 三层叠页效果 `stackedPaperEffect()`、`StackedPaperCard`、`TactileButton`、`EditorialBackButton`、`StampBadge`、`DiamondCheckbox`（45° 菱形复选框）、`EditorialChoiceChip`（10dp 圆角描边芯片）与 `DashedHorizontalDivider`。
+- **数据与交互补全**：`AppDatabase` / `ItemRepository` / `RoomItemRepository` / `MainViewModel` 暴露 `activeListCounts`（驱动索引耳角标、`ALL PENDING` 页脚与藏书统计）与 `togglePin(item)`（行内一键图钉切换）。
+- **五屏与小组件重构**：
+  - `MainActivity` 移除底栏，落地朱砂双线日历印章、与手账纸页无缝贯通的阶梯活页索引耳（`zIndex(6f)` + 2dp 底部遮盖条）、`44dp` 贯穿朱砂边线、置顶左侧 3dp 朱砂竖线、底部留白散点尺线、页脚压印及深色墨石悬浮岛。
+  - `QuickEntryActivity` 落地顶部撕页齿孔装饰条、`16dp` 点阵便签纸与水印字数计数，保留既有长期草稿、编辑冲突检测与 50 条批量录入校验。
+  - `ManageListsScreen` 落地编号叠页卡片、统一尺寸行动作按钮、行内建册及 `EX LIBRIS · 藏书印记`（`V0.4.0 ARCHIVE`）统计卡。
+  - `WidgetConfigureActivity` 与 `widget_content.xml` / `widget_check_ring_*.xml` / `widget_colors.xml` 落地桌面壁纸仿真衬底预览、`SPEC` 铭牌、45° 菱形复选框与衬线标题。
+  - `SettingsScreen` 落地独立手账页头、罗马数字朱砂章节、描边单选芯片、`.paper-action-btn` 触感按钮及 `LOCAL FIRST` 方形印章；`versionName` 同步为 `0.4.0`（`versionCode = 11`）。
+- **实机视觉比对与验证**：在 API 36 模拟器（`emulator-5580`）注入原型同款样例数据抓取五屏亮/暗色截图，与 `docs/visual-refresh/phone-*.png` 逐屏对比修正层级遮挡、按钮对齐、芯片与印章样式。全量重跑 `prototype/warm/verify.cjs`（30/30）、`:app:testDebugUnitTest`（67/67）、`:app:lintDebug`（0 error）以及实机仪器测试 47/47（`RepositoryTest` 20、`MigrationTest` 1、`WidgetRenderingTest` 9、`FrameworkUiTest` 14、`WidgetPinTest` 3）全部通过。
+
+## v0.4.0 · 移除待买类型 / 2026-11-14
+
+应使用需求移除整个「待买」（SHOPPING）类型，只保留待办，简化为单一清单体系：
+
+- **领域与数据**：删除 `ListKind`、`DEFAULT_SHOPPING`、数量/单位字段（`Item`、`ItemInput`、`Draft`、校验、DB 列、备份字段、草稿 JSON 键）；`BackupList.kind` 改为 `String?` 仅作旧格式兼容。`AppDatabase` 升到 **version 2**，新增首个 `Migration`（`data/db/Migrations.kt`）。
+- **v1→v2 迁移**：kind=SHOPPING 清单删除，其记录按 createdAt,id 追加到随手待办末尾（sortKey 顺延）；widget_configs 改绑随手待办并清空 widget_undo；引用已删清单的草稿按删除清单规则搬移/重写；preferences 清除 `last_kind`、`last_list_SHOPPING`；recreate-table 重建 lists（UNIQUE(normalizedName)）与 items。Room 迁移阶段外键约束未开启，重建安全。清单重名检查从“同类型内”改为全局唯一。
+- **UI**：底部导航只剩待办/设置；编辑器删数量/单位与跨类型确认弹窗；主页面与 Widget 空态/播报统一为待办文案（“已完成”）；删除 `ic_nav_shop`；`widget_description` 去掉“待买”。
+- **备份兼容**：decode 接受旧 `kind:"SHOPPING"` 清单与记录上的数量字段（导入时丢弃数量、清单并入随手待办）；encode 恒写 `kind:"TODO"`，旧版 App 仍可导入新备份；`BACKUP_SCHEMA_VERSION` 保持 1。
+- **主页面偏好**：改用单一 `last_list` 键，首次启动惰性迁移旧 `last_list_TODO`。
+
+### 实际结果
+
+| 检查 | 结果 |
+|---|---|
+| JVM 单元测试 | 67/67 通过（数量/单位用例删除，新增旧备份兼容用例） |
+| 仪器测试 | 47/47 通过（API36 模拟器；新增 `MigrationTest`：schema 1.json 造旧库→跑迁移→断言并入/改绑/偏好清理） |
+| 覆盖安装演练 | v0.3.5（待买清单含记录、绑定待买）→ 覆盖安装 v0.4.0：底部导航只剩待办/设置，记录追加进随手待办、数量不再显示，数据库 `user_version=2`、`kind` 与数量/单位列已删除、preferences 已清空 |
+
+首轮完整仪器测试出现 3 个失败，处置如下：`backupImportConvertsLegacyShoppingLists` 为测试自身断言错误（种子数据已完成，误查未完成筛选，修正断言）；`settingsThemeAndLiteralSearch` 因删除类型切换 tab 后失去原有的“切 tab 清空搜索”副作用，改为直接清空搜索框；`widgetConfigurationBackCancelAndSaveReturnHomeWithAppUnderneath` 在 API36 高分屏上配置页一屏放下、无滚动容器，`UiScrollable` 直接失败（v0.3.5 绿记录来自 API34），改为目标可见时跳过滚动。修正后完整重跑 47/47 通过。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，以 `am instrument` 输出为准。
+
 ## v0.3.5 · 闭环状态与桌面刷新 / 2026-11-10
 
 本版不新增功能模块，只修正闭环状态反馈与刷新可靠性：

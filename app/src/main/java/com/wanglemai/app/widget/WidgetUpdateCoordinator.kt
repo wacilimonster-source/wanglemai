@@ -118,7 +118,7 @@ class WidgetUpdateCoordinator(
         )
         val layouts = sizes.associateWith { size ->
             renderer.render(
-                list = TaskList(list.id, list.name, ListKind.valueOf(list.kind), list.isDefault),
+                list = TaskList(list.id, list.name, list.isDefault),
                 rows = rows.map { it.model() },
                 totalActive = total,
                 undo = undo,

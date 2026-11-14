@@ -1,217 +1,595 @@
 package com.wanglemai.app.ui.lists
 
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wanglemai.app.domain.ListKind
-import com.wanglemai.app.domain.MutationResult
-import com.wanglemai.app.domain.TaskList
-import com.wanglemai.app.domain.message
-import com.wanglemai.app.ui.main.MainViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
+import androidx.compose.ui.unit.sp
+import com.wanglemai.app.domain.*
+import com.wanglemai.app.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
 fun ManageListsScreen(
-    vm: MainViewModel,
-    snack: SnackbarHostState,
-    scope: CoroutineScope,
-    modifier: Modifier,
-    onBack: () -> Unit
+    lists: List<TaskList>,
+    counts: Map<String, Int>,
+    activeCounts: Map<String, Int> = emptyMap(),
+    onBack: () -> Unit,
+    onCreate: suspend (String) -> MutationResult,
+    onRename: suspend (TaskList, String) -> MutationResult,
+    onDelete: suspend (TaskList) -> MutationResult,
+    onMessage: (String) -> Unit
 ) {
-    val lists by vm.lists.collectAsStateWithLifecycle()
-    val counts by vm.listCounts.collectAsStateWithLifecycle()
-    val kind by vm.kind.collectAsStateWithLifecycle()
-    val current = lists.filter { it.kind == kind }
-    val kindWord = if (kind == ListKind.SHOPPING) "待买" else "待办"
+    val palette = LocalEditorialPalette.current
+    val scope = rememberCoroutineScope()
+    var creating by rememberSaveable { mutableStateOf(false) }
+    var renamingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var inlineName by rememberSaveable { mutableStateOf("") }
+    var inlineError by rememberSaveable { mutableStateOf<String?>(null) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    var submitting by remember { mutableStateOf(false) }
 
-    var showNameDialog by remember { mutableStateOf(false) }
-    var renameTarget by remember { mutableStateOf<TaskList?>(null) }
-    var nameText by remember { mutableStateOf("") }
-    var dialogError by remember { mutableStateOf<String?>(null) }
-    var dialogBusy by remember { mutableStateOf(false) }
-    var deleteTarget by remember { mutableStateOf<TaskList?>(null) }
-    var deleteError by remember { mutableStateOf<String?>(null) }
-    var deleteBusy by remember { mutableStateOf(false) }
-    val nameFocus = remember { FocusRequester() }
+    val renaming = lists.firstOrNull { it.id == renamingId }
+    val deleting = lists.firstOrNull { it.id == deletingId }
+    val defaultName = lists.firstOrNull { it.isDefault }?.name ?: "随手待办"
 
-    LaunchedEffect(showNameDialog) {
-        if (showNameDialog) {
-            delay(120)
-            runCatching { nameFocus.requestFocus() }
+    val totalActive = remember(activeCounts) { activeCounts.values.sum() }
+    val totalAll = remember(counts) { counts.values.sum() }
+    val totalArchived = (totalAll - totalActive).coerceAtLeast(0)
+
+    LaunchedEffect(renamingId, lists) {
+        if (renamingId != null && renaming == null) {
+            renamingId = null
+            error = null
+            onMessage(MutationResult.NotFound.message())
+        }
+    }
+    LaunchedEffect(deletingId, lists) {
+        if (deletingId != null && deleting == null) {
+            deletingId = null
+            onMessage(MutationResult.NotFound.message())
         }
     }
 
-    Column(modifier.fillMaxSize().padding(horizontal = 20.dp)
-        .verticalScroll(rememberScrollState())) {
-        Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onBack) { Text("← 返回清单") }
-        Text("管理$kindWord 清单", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(4.dp))
-        Text("默认清单可以改名，但不能删除。每个小部件只绑定一份清单。",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
-        if (current.isEmpty()) {
-            Surface(
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("正在读取清单…", Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(palette.bg)
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // 1. Editorial Page Header
+        item(key = "manage_header") {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                EditorialBackButton(
+                    text = "← 返回手账",
+                    onClick = onBack
+                )
+                Text(
+                    text = "书签与分册目录",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = palette.text
+                )
+                Text(
+                    text = "默认分册可改名不可删；删册时其下记录自动迁回默认册。",
+                    fontSize = 12.sp,
+                    color = palette.muted,
+                    lineHeight = 18.sp
+                )
             }
         }
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column {
-                current.forEachIndexed { index, list ->
-                    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(list.name)
+
+        // 2. Stacked Paper Card with Lists
+        item(key = "manage_lists_card") {
+            StackedPaperCard {
+                lists.forEachIndexed { index, list ->
+                    val totalCount = counts[list.id] ?: 0
+                    val activeCount = activeCounts[list.id] ?: 0
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = padCount(index + 1),
+                                    fontFamily = EditorialMono,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = palette.primary
+                                )
+                                Text(
+                                    text = list.name,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = palette.text
+                                )
+                                if (list.isDefault) {
+                                    StampBadge(text = "默认常驻")
+                                }
+                            }
                             Text(
-                                buildString {
-                                    if (list.isDefault) append("默认清单 · ")
-                                    append("${counts[list.id] ?: 0} 条记录")
-                                    if (list.isDefault) append(" · 不可删除")
+                                text = if (list.isDefault) {
+                                    "${padCount(activeCount)} 项待办 · 共 ${padCount(totalCount)} 条记录 · 不可删除"
+                                } else {
+                                    "${padCount(activeCount)} 项待办 · 共 ${padCount(totalCount)} 条记录"
                                 },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                fontSize = 12.sp,
+                                color = palette.muted
                             )
                         }
-                        TextButton(onClick = {
-                            renameTarget = list
-                            nameText = list.name
-                            dialogError = null
-                            showNameDialog = true
-                        }) { Text("改名") }
-                        TextButton(
-                            enabled = !list.isDefault,
-                            onClick = {
-                                deleteTarget = list
-                                deleteError = null
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                onClick = {
+                                    name = list.name
+                                    error = null
+                                    renamingId = list.id
+                                },
+                                modifier = Modifier.heightIn(min = 32.dp),
+                                shape = RoundedCornerShape(9.dp),
+                                color = palette.soft,
+                                border = BorderStroke(1.dp, palette.lineStrong.copy(alpha = 0.65f))
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "改名",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = palette.text
+                                    )
+                                }
                             }
-                        ) { Text("删除") }
+                            Surface(
+                                onClick = { if (!list.isDefault) deletingId = list.id },
+                                enabled = !list.isDefault,
+                                modifier = Modifier.heightIn(min = 32.dp),
+                                shape = RoundedCornerShape(9.dp),
+                                color = if (list.isDefault) palette.soft.copy(alpha = 0.5f) else palette.soft,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (list.isDefault) palette.line else palette.lineStrong.copy(alpha = 0.65f)
+                                )
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "删除",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (list.isDefault) palette.faint.copy(alpha = 0.55f) else palette.danger
+                                    )
+                                }
+                            }
+                        }
                     }
-                    if (index < current.lastIndex) {
-                        HorizontalDivider(
-                            Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant
+                    if (index < lists.lastIndex) {
+                        HorizontalDivider(thickness = 1.dp, color = palette.line)
+                    }
+                }
+            }
+        }
+
+        // 3. Inline Create Bar (+ Dialog Fallback when empty)
+        item(key = "inline_create_bar") {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = palette.surface,
+                        border = BorderStroke(1.dp, palette.lineStrong)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (inlineName.isEmpty()) {
+                                Text(
+                                    text = "新分册名称，如：月度书单…",
+                                    fontSize = 13.sp,
+                                    color = palette.faint
+                                )
+                            }
+                            BasicTextField(
+                                value = inlineName,
+                                onValueChange = {
+                                    inlineName = it
+                                    inlineError = null
+                                },
+                                singleLine = true,
+                                textStyle = TextStyle(
+                                    fontSize = 13.sp,
+                                    color = palette.text
+                                ),
+                                cursorBrush = SolidColor(palette.primary),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        if (inlineName.isNotBlank() && !submitting) {
+                                            submitting = true
+                                            scope.launch {
+                                                try {
+                                                    when (val res = onCreate(inlineName)) {
+                                                        is MutationResult.Success -> {
+                                                            inlineName = ""
+                                                            inlineError = null
+                                                            onMessage("已创建清单")
+                                                        }
+
+                                                        is MutationResult.ValidationError -> inlineError = res.message
+                                                        else -> inlineError = res.message()
+                                                    }
+                                                } finally {
+                                                    submitting = false
+                                                }
+                                            }
+                                        }
+                                    }
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    Surface(
+                        onClick = {
+                            if (inlineName.isBlank()) {
+                                name = ""
+                                error = null
+                                creating = true
+                            } else if (!submitting) {
+                                submitting = true
+                                scope.launch {
+                                    try {
+                                        when (val res = onCreate(inlineName)) {
+                                            is MutationResult.Success -> {
+                                                inlineName = ""
+                                                inlineError = null
+                                                onMessage("已创建清单")
+                                            }
+
+                                            is MutationResult.ValidationError -> inlineError = res.message
+                                            else -> inlineError = res.message()
+                                        }
+                                    } finally {
+                                        submitting = false
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .height(42.dp)
+                            .shadow(
+                                elevation = 3.dp,
+                                shape = RoundedCornerShape(12.dp),
+                                ambientColor = palette.primary.copy(alpha = 0.35f),
+                                spotColor = palette.primary.copy(alpha = 0.35f)
+                            )
+                            .semantics { contentDescription = "＋ 新建清单" },
+                        shape = RoundedCornerShape(12.dp),
+                        color = palette.primary
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "＋ 添一册",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = palette.onPrimary
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = "分册名称全局唯一。添册后将作为顶部活页索引耳展示。",
+                    fontSize = 11.sp,
+                    color = palette.muted
+                )
+                if (inlineError != null) {
+                    Text(
+                        text = inlineError!!,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = palette.danger
+                    )
+                }
+            }
+        }
+
+        // 4. EX LIBRIS Archival Stamp Card
+        item(key = "ex_libris_card") {
+            val exShape = RoundedCornerShape(14.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(exShape)
+                    .background(palette.surfaceWarm)
+                    .drawBehind {
+                        drawRoundRect(
+                            color = palette.lineStrong,
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.dp.toPx(), 14.dp.toPx()),
+                            style = Stroke(
+                                width = 1.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 7f), 0f)
+                            )
+                        )
+                    }
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "EX LIBRIS · 藏书印记",
+                            fontFamily = EditorialMono,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = palette.faint
+                        )
+                        Text(
+                            text = "V0.4.0 ARCHIVE",
+                            fontFamily = EditorialMono,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = palette.faint
+                        )
+                    }
+                    HorizontalDivider(thickness = 1.dp, color = palette.line)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        ExLibrisStatItem(
+                            number = padCount(lists.size),
+                            label = "立册总数",
+                            modifier = Modifier.weight(1f)
+                        )
+                        ExLibrisStatItem(
+                            number = padCount(totalActive),
+                            label = "待办小事",
+                            modifier = Modifier.weight(1f)
+                        )
+                        ExLibrisStatItem(
+                            number = padCount(totalArchived),
+                            label = "已归档页",
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
             }
         }
-        Spacer(Modifier.height(20.dp))
-        Button(
-            onClick = {
-                renameTarget = null
-                nameText = ""
-                dialogError = null
-                showNameDialog = true
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium
-        ) { Text("＋ 新建$kindWord 清单") }
-        Spacer(Modifier.height(32.dp))
     }
 
-    if (showNameDialog) {
+    if (creating || renaming != null) {
+        val target = renaming
+        val focusRequester = remember { FocusRequester() }
+        LaunchedEffect(creating, target?.id) {
+            focusRequester.requestFocus()
+        }
         AlertDialog(
-            onDismissRequest = { if (!dialogBusy) showNameDialog = false },
-            title = { Text(if (renameTarget == null) "新建$kindWord 清单" else "重命名清单") },
+            onDismissRequest = {
+                if (!submitting) {
+                    creating = false
+                    renamingId = null
+                    error = null
+                }
+            },
+            containerColor = palette.surface,
+            titleContentColor = palette.text,
+            textContentColor = palette.text,
+            title = {
+                Text(
+                    text = if (target == null) "新建清单" else "重命名清单",
+                    fontFamily = EditorialSerif,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = nameText,
-                        onValueChange = { nameText = it; dialogError = null },
-                        singleLine = true,
+                        value = name,
+                        onValueChange = {
+                            name = it
+                            error = null
+                        },
                         label = { Text("清单名称") },
-                        modifier = Modifier.fillMaxWidth().focusRequester(nameFocus),
-                        enabled = !dialogBusy
+                        singleLine = true,
+                        isError = error != null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
                     )
-                    dialogError?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    if (error != null) {
+                        Text(
+                            text = error!!,
+                            color = palette.danger,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             },
             confirmButton = {
-                TextButton(enabled = !dialogBusy, onClick = {
-                    if (dialogBusy) return@TextButton
-                    dialogBusy = true
-                    scope.launch {
-                        val target = renameTarget
-                        val result = if (target == null) vm.createList(nameText)
-                        else vm.renameList(target, nameText)
-                        dialogBusy = false
-                        if (result is MutationResult.Success) {
-                            showNameDialog = false
-                            snack.showSnackbar(if (target == null) "清单已创建" else "清单已改名")
-                        } else {
-                            dialogError = result.message()
+                TextButton(
+                    enabled = !submitting,
+                    onClick = {
+                        submitting = true
+                        scope.launch {
+                            try {
+                                val result = if (target == null) {
+                                    onCreate(name)
+                                } else {
+                                    onRename(target, name)
+                                }
+                                when (result) {
+                                    is MutationResult.Success -> {
+                                        val created = target == null
+                                        creating = false
+                                        renamingId = null
+                                        error = null
+                                        onMessage(if (created) "已创建清单" else "已重命名")
+                                    }
+
+                                    is MutationResult.ValidationError -> error = result.message
+                                    else -> error = result.message()
+                                }
+                            } finally {
+                                submitting = false
+                            }
                         }
                     }
-                }) { Text(if (dialogBusy) "保存中…" else "保存") }
+                ) { Text("保存", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(enabled = !dialogBusy, onClick = { showNameDialog = false }) { Text("取消") }
+                TextButton(
+                    enabled = !submitting,
+                    onClick = {
+                        creating = false
+                        renamingId = null
+                        error = null
+                    }
+                ) { Text("取消") }
             }
         )
     }
 
-    deleteTarget?.let { target ->
-        val defaultName = lists.firstOrNull { it.kind == target.kind && it.isDefault }?.name
-            ?: if (target.kind == ListKind.SHOPPING) "日常采购" else "随手待办"
+    if (deleting != null) {
+        val count = counts[deleting.id] ?: 0
         AlertDialog(
-            onDismissRequest = { if (!deleteBusy) deleteTarget = null },
-            title = { Text("删除「${target.name}」？") },
+            onDismissRequest = { if (!submitting) deletingId = null },
+            containerColor = palette.surface,
+            titleContentColor = palette.text,
+            textContentColor = palette.muted,
+            title = {
+                Text(
+                    text = "删除「${deleting.name}」？",
+                    fontFamily = EditorialSerif,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
-                Column {
-                    Text("其中 ${counts[target.id] ?: 0} 条记录将移到「$defaultName」，关联小部件也会切换。")
-                    deleteError?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                    }
-                }
+                Text("删除「${deleting.name}」后，其中 $count 条记录将移动到「$defaultName」。")
             },
             confirmButton = {
-                TextButton(enabled = !deleteBusy, onClick = {
-                    if (deleteBusy) return@TextButton
-                    deleteBusy = true
-                    scope.launch {
-                        val result = vm.deleteList(target)
-                        deleteBusy = false
-                        if (result is MutationResult.Success) {
-                            deleteTarget = null
-                            snack.showSnackbar(result.message())
-                        } else {
-                            deleteError = result.message()
+                TextButton(
+                    enabled = !submitting,
+                    onClick = {
+                        val target = deleting
+                        submitting = true
+                        scope.launch {
+                            try {
+                                when (val result = onDelete(target)) {
+                                    is MutationResult.Success -> {
+                                        deletingId = null
+                                        onMessage("已删除清单，${result.movedCount} 条记录已移到「$defaultName」")
+                                    }
+
+                                    else -> {
+                                        deletingId = null
+                                        onMessage(result.message())
+                                    }
+                                }
+                            } finally {
+                                submitting = false
+                            }
                         }
-                    }
-                }) { Text(if (deleteBusy) "删除中…" else "删除并移动") }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = palette.danger)
+                ) { Text("删除并移动", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(enabled = !deleteBusy, onClick = { deleteTarget = null }) { Text("取消") }
+                TextButton(
+                    enabled = !submitting,
+                    onClick = { deletingId = null }
+                ) { Text("取消") }
             }
+        )
+    }
+}
+
+@Composable
+private fun ExLibrisStatItem(
+    number: String,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    val palette = LocalEditorialPalette.current
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = number,
+            fontFamily = EditorialSerif,
+            fontSize = 21.sp,
+            fontWeight = FontWeight.Bold,
+            color = palette.primary
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = palette.muted
         )
     }
 }

@@ -26,23 +26,25 @@ app/src/main/res/values*/
 app/src/test/               app/src/androidTest/
 ```
 
-Provider 名称仅代表布局，实际可绑定 TODO 或 SHOPPING；使用 ListSmallProvider / ListLargeProvider，不按待办/待买另建 Provider。
+Provider 名称仅代表布局，可绑定任意待办清单；使用 ListSmallProvider / ListLargeProvider。
 
-## 3. 数据库 v1
+## 3. 数据库 v2
 
-所有时间均为 UTC epochMillis Long；显示本地时区。ID 为 UUID String（两个内置清单除外）。布尔值不使用中文文案持久化。枚举存稳定字符串。Unicode 限制统一使用 codePointCount，不用 Kotlin Char 数量代替。
+v0.4.0 起为 v2：`lists.kind` 列与 `items.quantityDecimal`/`unit` 列删除（v1→v2 迁移见下）。所有时间均为 UTC epochMillis Long；显示本地时区。ID 为 UUID String（内置清单除外）。布尔值不使用中文文案持久化。枚举存稳定字符串。Unicode 限制统一使用 codePointCount，不用 Kotlin Char 数量代替。
 
 | 表 | 字段与约束 |
 |---|---|
-| lists | id PK; kind TODO/SHOPPING; name; normalizedName; isDefault Boolean; createdAt; updatedAt; version Long>=1；UNIQUE(kind,normalizedName) |
-| items | id PK; listId FK lists RESTRICT; title; note String默认空; quantityDecimal String?; unit String?; completed Boolean; pinned Boolean; sortKey Long; createdAt; updatedAt; completedAt Long?; deletedAt Long?; version Long>=1 |
+| lists | id PK; name; normalizedName; isDefault Boolean; createdAt; updatedAt; version Long>=1；UNIQUE(normalizedName) |
+| items | id PK; listId FK lists RESTRICT; title; note String默认空; completed Boolean; pinned Boolean; sortKey Long; createdAt; updatedAt; completedAt Long?; deletedAt Long?; version Long>=1 |
 | widget_configs | appWidgetId Int PK; providerClass String; listId FK; theme; density; updatedAt |
 | widget_undo | appWidgetId PK/FK widget_configs CASCADE; commandId UUID UNIQUE; itemId FK; previousCompleted Boolean; previousCompletedAt Long?; expectedItemVersion Long |
 | drafts | draftKey PK; payloadJson（含 targetListId、字段、batchMode）; baseItemVersion Long?; updatedAt |
-| preferences | key PK; value String；主题、上次类型、每类上次清单 |
+| preferences | key PK; value String；主题、上次清单 |
 | applied_commands | commandId UUID PK; resultIdsJson; createdAt；防止新增及批量重试重复写入 |
 
-索引：items(listId,deletedAt,completed,pinned,sortKey)、items(listId,completedAt)、widget_configs(listId)。default ID + isDefault 必须一致；每类恰有一个 default，初始化事务幂等。`completed=true` 要求 completedAt 非空，反之为空。TODO 记录 quantity/unit 必须为空。quantity 使用 BigDecimal 校验、toPlainString 存储，不能用 Float/Double。软删除项不参与 max sortKey 计算可接受，但排序仍有 id 决胜。迁移禁止 destructive fallback；导出 Room schema。
+索引：items(listId,deletedAt,completed,pinned,sortKey)、items(listId,completedAt)、widget_configs(listId)。default ID + isDefault 必须一致；初始化事务幂等。`completed=true` 要求 completedAt 非空，反之为空。软删除项不参与 max sortKey 计算可接受，但排序仍有 id 决胜。迁移禁止 destructive fallback；导出 Room schema。
+
+**v1→v2 迁移（`MIGRATION_1_2`）**：kind=SHOPPING 的清单删除，其记录（含软删除项）按 createdAt,id 顺序追加到随手待办末尾（sortKey 从目标 maxSortKey+1024 顺延）；绑定这些清单的 widget_configs 改绑随手待办并清空 widget_undo；引用已删清单的草稿按删除清单规则搬移/重写 listId；preferences 清除 `last_kind`、`last_list_SHOPPING`；按 recreate-table 模式重建 lists（去 kind 列、UNIQUE(normalizedName)）与 items（去数量/单位列）。Room 迁移阶段外键约束未开启，重建安全；schema 见 `app/schemas/`。
 
 ## 4. 业务接口（语义固定，具体 Kotlin 类型可按工程调整）
 
@@ -58,7 +60,7 @@ interface ItemRepository {
     suspend fun undoWidgetCompletion(widgetId: Int, commandId: String): MutationResult
     suspend fun undoCompletion(token: UndoToken): MutationResult // App内存撤销，同样执行CAS
     suspend fun delete(id: String, expectedVersion: Long): MutationResult
-    suspend fun createList(kind: ListKind, name: String): MutationResult
+    suspend fun createList(name: String): MutationResult
     suspend fun renameList(id: String, expectedVersion: Long, name: String): MutationResult
     suspend fun deleteListAndMoveToDefault(id: String, expectedVersion: Long): MutationResult
 }
@@ -109,12 +111,12 @@ MVP 进程内 Coordinator 用 Mutex 串行化同一实例生成更新，每轮�
   "schemaVersion": 1,
   "app": "com.wanglemai.app",
   "exportedAt": 1793923200000,
-  "lists": [{"id":"list-shopping-default","kind":"SHOPPING","name":"日常采购","isDefault":true,"createdAt":1793923200000,"updatedAt":1793923200000}],
-  "items": [{"id":"550e8400-e29b-41d4-a716-446655440000","listId":"list-shopping-default","title":"牛奶","note":"","quantityDecimal":"2","unit":"盒","completed":false,"pinned":false,"sortKey":1024,"createdAt":1793923200000,"updatedAt":1793923200000,"completedAt":null}]
+  "lists": [{"id":"list-todo-default","kind":"TODO","name":"随手待办","isDefault":true,"createdAt":1793923200000,"updatedAt":1793923200000}],
+  "items": [{"id":"550e8400-e29b-41d4-a716-446655440000","listId":"list-todo-default","title":"取快递","note":"","completed":false,"pinned":false,"sortKey":1024,"createdAt":1793923200000,"updatedAt":1793923200000,"completedAt":null}]
 }
 ```
 
-仅示例不是首次安装样例数据。备份不需要携带 version；新导入记录 version=1，已有 ID 跳过。导出必须包含两个默认清单（上例为节省篇幅只展示一个；实际导入验证默认清单对应关系，缺失默认清单可先本地幂等初始化）。外部 ID 允许两个内置 ID 或合法 UUID；重复 ID、同 ID 不同类型、非法 default 标记、未被导入或本机清单覆盖的 listId、违规字段、时间/排序非安全整数、未知枚举均整批拒绝。JSON 反序列化忽略无害未知字段，拒绝未知 schemaVersion。
+仅示例不是首次安装样例数据。v0.4.0 起导出恒写 `kind:"TODO"`（字段保留以兼容旧版导入）；`items.quantityDecimal`/`unit` 不再写出。备份不需要携带 version；新导入记录 version=1，已有 ID 跳过。导出必须包含默认清单（实际导入验证默认清单对应关系，缺失默认清单可先本地幂等初始化）。外部 ID 允许两个内置 ID（含旧版 `list-shopping-default`）或合法 UUID；重复 ID、非法 default 标记、未知 kind 值、非法引用的 listId、违规字段、时间/排序非安全整数均整批拒绝。旧备份中的 SHOPPING 清单不导入，其记录并入随手待办并丢弃数量/单位。JSON 反序列化忽略无害未知字段，拒绝未知 schemaVersion。
 
 导入前限制流大小，禁止先无界读入再检查。预览阶段不写库；确认时在事务中重新校验当前库冲突，防止预览后库改变。导入名称冲突按产品规则补后缀。撤销/config/drafts 不从文件导入。系统文件选择器取消不显示失败。备份含明文用户内容，界面告知“文件包含你的记录，请妥善保存”。
 

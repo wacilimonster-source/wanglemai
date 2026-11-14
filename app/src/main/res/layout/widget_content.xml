@@ -19,7 +19,7 @@
                 <TextView android:id="@+id/widget_title"
                     android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
                     android:gravity="center_vertical" android:maxLines="1" android:ellipsize="end"
-                    android:text="忘了没" android:textSize="16sp" android:fontFamily="sans-serif-medium"
+                    android:text="忘了没" android:textSize="16sp" android:fontFamily="serif" android:textStyle="bold"
                     android:textColor="@color/widget_light_text" android:importantForAccessibility="no" />
                 <TextView android:id="@+id/widget_count"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"

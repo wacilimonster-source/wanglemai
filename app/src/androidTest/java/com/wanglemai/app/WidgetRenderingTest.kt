@@ -24,7 +24,6 @@ import com.wanglemai.app.data.db.WidgetConfig
 import com.wanglemai.app.debug.WidgetHarnessActivity
 import com.wanglemai.app.domain.Item
 import com.wanglemai.app.domain.ItemInput
-import com.wanglemai.app.domain.ListKind
 import com.wanglemai.app.domain.MutationResult
 import com.wanglemai.app.domain.TaskList
 import com.wanglemai.app.domain.UndoToken
@@ -47,9 +46,9 @@ import kotlin.math.roundToInt
 class WidgetRenderingTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val baseContext = instrumentation.targetContext
-    private val list = TaskList("render-test", "随手待办", ListKind.SHOPPING)
+    private val list = TaskList("render-test", "随手待办")
     private val rows = (1..12).map { index ->
-        Item("item-$index", list.id, "事项 $index", "", "2", "盒", false,
+        Item("item-$index", list.id, "事项 $index", "", false,
             index == 1, index.toLong(), 0, 0, null, 1)
     }
 
@@ -121,10 +120,6 @@ class WidgetRenderingTest {
                         for (compact in listOf(false, true)) {
                             val root = render(context, SizeF(width, height), compact)
                             assertGeometry(context, root)
-                            val first = root.findViewById<LinearLayout>(R.id.widget_rows).getChildAt(0)
-                            if (width < 240 && first != null) {
-                                assertEquals(View.GONE, first.findViewById<View>(R.id.row_quantity).visibility)
-                            }
                             if (scale >= 1.3f || width < 240) {
                                 assertEquals(View.GONE, root.findViewById<View>(R.id.widget_count).visibility)
                             }
@@ -147,10 +142,7 @@ class WidgetRenderingTest {
                 measure(context, SizeF(320f, 320f), root)
                 return root.findViewById<TextView>(R.id.widget_empty).text.toString()
             }
-            val shopping = TaskList("render-test", "日常采购", ListKind.SHOPPING)
-            val todo = TaskList("render-test", "随手待办", ListKind.TODO)
-            assertEquals("还没要买的，记一条", emptyText(shopping, 0))
-            assertEquals("都买齐了 · 再记一条", emptyText(shopping, 3))
+            val todo = TaskList("render-test", "随手待办")
             assertEquals("清单空空，想到就记", emptyText(todo, 0))
             assertEquals("都完成了 · 再记一条", emptyText(todo, 3))
         }
@@ -171,7 +163,7 @@ class WidgetRenderingTest {
             assertEquals("已完成 · 撤销", root.findViewById<TextView>(R.id.widget_title).text.toString())
             assertEquals(View.VISIBLE, root.findViewById<View>(R.id.widget_header_add).visibility)
             assertEquals(View.GONE, root.findViewById<View>(R.id.widget_footer).visibility)
-            assertTrue(root.findViewById<View>(R.id.row_title).contentDescription.contains("数量 2 盒"))
+            assertTrue(root.findViewById<View>(R.id.row_title).contentDescription.contains("事项 1"))
             assertEquals(View.VISIBLE, root.findViewById<View>(R.id.row_pin).visibility)
             assertGeometry(context, root)
             val error = renderer.error(true, layout, pending, pending).apply(context, FrameLayout(context))
@@ -273,7 +265,7 @@ class WidgetRenderingTest {
     @Test fun resizingRealHostSelectsResponsiveLayoutsAndCompactCapacity() = runBlocking {
         val container = baseContext.app.container
         container.repository.initialize()
-        val listId = (container.repository.createList(ListKind.TODO, "尺寸验证")
+        val listId = (container.repository.createList("尺寸验证")
             as MutationResult.Success).itemIds.single()
         val prefix = "尺寸事项${System.currentTimeMillis()}"
         repeat(8) { index ->

@@ -7,6 +7,7 @@ import androidx.room.Room
 import com.wanglemai.app.data.RoomBackupRepository
 import com.wanglemai.app.data.RoomItemRepository
 import com.wanglemai.app.data.db.AppDatabase
+import com.wanglemai.app.data.db.MIGRATION_1_2
 import com.wanglemai.app.data.update.UpdateCenter
 import com.wanglemai.app.domain.MutationResult
 import com.wanglemai.app.widget.WidgetUpdateCoordinator
@@ -26,7 +27,9 @@ class WanglemaiApplication : Application() {
     }
 }
 class AppContainer(context: Context) {
-    val db = Room.databaseBuilder(context, AppDatabase::class.java, "wanglemai.db").build()
+    val db = Room.databaseBuilder(context, AppDatabase::class.java, "wanglemai.db")
+        .addMigrations(MIGRATION_1_2)
+        .build()
     val repository = RoomItemRepository(db)
     val backup = RoomBackupRepository(db)
     val widgets = WidgetUpdateCoordinator(context.applicationContext, db, repository)

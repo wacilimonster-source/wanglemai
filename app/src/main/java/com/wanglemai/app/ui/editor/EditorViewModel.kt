@@ -31,8 +31,6 @@ data class EditorUiState(
     val itemId: String? = null,
     val title: String = "",
     val note: String = "",
-    val quantity: String = "",
-    val unit: String = "",
     val pinned: Boolean = false,
     val batch: Boolean = false,
     val expectedVersion: Long = 1,
@@ -46,13 +44,10 @@ data class EditorUiState(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val focusRequest: Int = 0,
     val imeRequest: Int = 0,
-    val crossTypeConfirm: Boolean = false,
     val savedCount: Int = 0,
     val dirty: Boolean = false
 ) {
     val canSave: Boolean get() = loaded && !busy && !itemMissing && !conflict
-    val targetKind: ListKind?
-        get() = lists.firstOrNull { it.id == listId }?.kind
 }
 
 sealed interface EditorEvent {
@@ -78,7 +73,6 @@ class EditorViewModel(
     private val draftMutex = Mutex()
     @Volatile private var draftEpoch = 0L
     private var pendingLatestVersion: Long? = null
-    private var pendingContinueAfterConfirm = false
     @Volatile private var lastSavedDraftKey: String? = null
 
     init {
@@ -105,8 +99,6 @@ class EditorViewModel(
                                 listId = draft.listId,
                                 title = draft.title,
                                 note = draft.note,
-                                quantity = draft.quantity,
-                                unit = draft.unit,
                                 pinned = draft.pinned,
                                 batch = draft.batch,
                                 draftRestored = true
@@ -128,7 +120,6 @@ class EditorViewModel(
                             var state = _state.value.copy(
                                 lists = allLists, theme = theme, loaded = true, itemId = item.id,
                                 listId = fallbackList, title = item.title, note = item.note,
-                                quantity = item.quantityDecimal.orEmpty(), unit = item.unit.orEmpty(),
                                 pinned = item.pinned, expectedVersion = item.version,
                                 draftBaseVersion = item.version
                             )
@@ -139,8 +130,6 @@ class EditorViewModel(
                                     } ?: fallbackList,
                                     title = draft.title,
                                     note = draft.note,
-                                    quantity = draft.quantity,
-                                    unit = draft.unit,
                                     pinned = draft.pinned,
                                     draftRestored = true,
                                     draftBaseVersion = draft.baseItemVersion ?: item.version
@@ -169,8 +158,6 @@ class EditorViewModel(
 
     fun setTitle(value: String) = touch { it.copy(title = value) }
     fun setNote(value: String) = touch { it.copy(note = value) }
-    fun setQuantity(value: String) = touch { it.copy(quantity = value) }
-    fun setUnit(value: String) = touch { it.copy(unit = value) }
     fun setPinned(value: Boolean) = touch { it.copy(pinned = value) }
     fun setBatch(value: Boolean) {
         if (mode != EditorMode.CREATE) return
@@ -199,8 +186,7 @@ class EditorViewModel(
                 }
             }
         }
-        _state.value = current.copy(listId = value, error = null, info = null,
-            crossTypeConfirm = false, dirty = true)
+        _state.value = current.copy(listId = value, error = null, info = null, dirty = true)
         scheduleDraft()
     }
 
@@ -230,8 +216,6 @@ class EditorViewModel(
                 listId = snapshot.listId,
                 title = snapshot.title,
                 note = snapshot.note,
-                quantity = snapshot.quantity,
-                unit = snapshot.unit,
                 pinned = snapshot.pinned,
                 batch = snapshot.batch,
                 baseItemVersion = snapshot.draftBaseVersion
@@ -254,36 +238,25 @@ class EditorViewModel(
     }
 
     fun save(continueAfter: Boolean = false) {
-        if (_state.value.crossTypeConfirm) return
-        performSave(continueAfter, confirmedMove = false)
+        performSave(continueAfter)
     }
 
-    private fun performSave(continueAfter: Boolean, confirmedMove: Boolean) {
+    private fun performSave(continueAfter: Boolean) {
         val snapshot = _state.value
         if (!snapshot.canSave) {
             if (snapshot.conflict) _state.value = snapshot.copy(error = "请先处理记录冲突")
             return
         }
-        val list = snapshot.lists.firstOrNull { it.id == snapshot.listId }
-        if (list == null) {
+        if (snapshot.lists.none { it.id == snapshot.listId }) {
             _state.value = snapshot.copy(error = "清单已不存在")
             return
         }
-        if (!confirmedMove && !snapshot.batch && list.kind == ListKind.TODO &&
-            (snapshot.quantity.isNotBlank() || snapshot.unit.isNotBlank())) {
-            pendingContinueAfterConfirm = continueAfter
-            _state.value = snapshot.copy(crossTypeConfirm = true)
-            return
-        }
-        _state.value = snapshot.copy(busy = true, error = null, info = null,
-            crossTypeConfirm = false)
+        _state.value = snapshot.copy(busy = true, error = null, info = null)
         viewModelScope.launch {
             val input = ItemInput(
                 listId = snapshot.listId,
                 title = snapshot.title,
                 note = snapshot.note,
-                quantity = if (list.kind == ListKind.SHOPPING && !snapshot.batch) snapshot.quantity else "",
-                unit = if (list.kind == ListKind.SHOPPING && !snapshot.batch) snapshot.unit else "",
                 pinned = snapshot.pinned
             )
             val result = withContext(Dispatchers.IO) {
@@ -303,7 +276,7 @@ class EditorViewModel(
                 if (mode == EditorMode.CREATE && continueAfter) {
                     commandId = UUID.randomUUID().toString()
                     _state.value = _state.value.copy(
-                        title = "", note = "", quantity = "", unit = "", pinned = false,
+                        title = "", note = "", pinned = false,
                         busy = false, error = null, draftRestored = false,
                         savedCount = result.itemIds.size,
                         info = "已保存 ${result.itemIds.size} 条",
@@ -333,20 +306,6 @@ class EditorViewModel(
                 appScope.launch(Dispatchers.IO) { runCatching { writeDraft(current, epoch) } }
             }
         }
-    }
-
-    fun confirmCrossTypeMove() {
-        val pending = pendingContinueAfterConfirm
-        pendingContinueAfterConfirm = false
-        _state.value = _state.value.copy(quantity = "", unit = "", crossTypeConfirm = false,
-            dirty = true)
-        scheduleDraft()
-        performSave(pending, confirmedMove = true)
-    }
-
-    fun cancelCrossTypeMove() {
-        pendingContinueAfterConfirm = false
-        _state.value = _state.value.copy(crossTypeConfirm = false)
     }
 
     fun delete() {
@@ -394,8 +353,6 @@ class EditorViewModel(
             _state.value = _state.value.copy(
                 title = item.title,
                 note = item.note,
-                quantity = item.quantityDecimal.orEmpty(),
-                unit = item.unit.orEmpty(),
                 pinned = item.pinned,
                 listId = item.listId,
                 expectedVersion = item.version,
@@ -444,7 +401,6 @@ class EditorViewModel(
                 } else {
                     _state.value = _state.value.copy(
                         title = item.title, note = item.note,
-                        quantity = item.quantityDecimal.orEmpty(), unit = item.unit.orEmpty(),
                         pinned = item.pinned, listId = item.listId,
                         expectedVersion = item.version, draftBaseVersion = item.version,
                         draftRestored = false, conflict = false, error = null, info = null,
@@ -453,7 +409,7 @@ class EditorViewModel(
                 }
             } else {
                 _state.value = _state.value.copy(
-                    title = "", note = "", quantity = "", unit = "", pinned = false,
+                    title = "", note = "", pinned = false,
                     batch = false, draftRestored = false, conflict = false,
                     error = null, info = null, dirty = false,
                     focusRequest = _state.value.focusRequest + 1,

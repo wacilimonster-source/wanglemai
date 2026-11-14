@@ -1,15 +1,11 @@
 package com.wanglemai.app.domain
 
-enum class ListKind { TODO, SHOPPING }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class WidgetDensity { COMFORTABLE, COMPACT, ULTRA_COMPACT }
 
 const val DEFAULT_TODO = "list-todo-default"
-const val DEFAULT_SHOPPING = "list-shopping-default"
 const val PREF_THEME = "theme"
-const val PREF_LAST_KIND = "last_kind"
-const val PREF_LAST_LIST_TODO = "last_list_TODO"
-const val PREF_LAST_LIST_SHOPPING = "last_list_SHOPPING"
+const val PREF_LAST_LIST = "last_list"
 
 fun themeModeOf(value: String?): ThemeMode =
     runCatching { ThemeMode.valueOf(value.orEmpty()) }.getOrDefault(ThemeMode.SYSTEM)
@@ -20,7 +16,6 @@ fun widgetDensityOf(value: String?): WidgetDensity =
 data class TaskList(
     val id: String,
     val name: String,
-    val kind: ListKind,
     val isDefault: Boolean = false,
     val createdAt: Long = 0,
     val updatedAt: Long = 0,
@@ -29,14 +24,14 @@ data class TaskList(
 
 data class Item(
     val id: String, val listId: String, val title: String, val note: String,
-    val quantityDecimal: String?, val unit: String?, val completed: Boolean,
+    val completed: Boolean,
     val pinned: Boolean, val sortKey: Long, val createdAt: Long, val updatedAt: Long,
     val completedAt: Long?, val version: Long
 )
 
 data class ItemInput(
     val listId: String, val title: String, val note: String = "",
-    val quantity: String = "", val unit: String = "", val pinned: Boolean = false
+    val pinned: Boolean = false
 )
 
 data class BatchInput(
@@ -48,8 +43,6 @@ data class Draft(
     val listId: String,
     val title: String,
     val note: String,
-    val quantity: String,
-    val unit: String,
     val pinned: Boolean,
     val batch: Boolean,
     val baseItemVersion: Long?

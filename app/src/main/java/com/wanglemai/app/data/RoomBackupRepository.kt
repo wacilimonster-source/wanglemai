@@ -12,8 +12,7 @@ class RoomBackupRepository(private val db: AppDatabase) : BackupRepository {
     private suspend fun ensureDefaults() {
         val time = System.currentTimeMillis()
         dao.insertLists(listOf(
-            ListEntity(DEFAULT_TODO, "TODO", "随手待办", "随手待办", true, time, time),
-            ListEntity(DEFAULT_SHOPPING, "SHOPPING", "日常采购", "日常采购", true, time, time)
+            ListEntity(DEFAULT_TODO, "随手待办", "随手待办", true, time, time)
         ))
     }
 
@@ -24,12 +23,12 @@ class RoomBackupRepository(private val db: AppDatabase) : BackupRepository {
             app = BACKUP_APP_ID,
             exportedAt = System.currentTimeMillis(),
             lists = dao.lists().map { list ->
-                BackupList(list.id, ListKind.valueOf(list.kind), list.name, list.isDefault,
+                BackupList(list.id, "TODO", list.name, list.isDefault,
                     list.createdAt, list.updatedAt)
             },
             items = dao.backupItems().map { item ->
                 BackupItem(item.id, item.listId, item.title, item.note,
-                    item.quantityDecimal, item.unit, item.completed, item.pinned, item.sortKey,
+                    item.completed, item.pinned, item.sortKey,
                     item.createdAt, item.updatedAt, item.completedAt)
             }
         )
@@ -43,27 +42,28 @@ class RoomBackupRepository(private val db: AppDatabase) : BackupRepository {
         }
     }
 
+    /**
+     * Legacy backups (pre-v0.4.0) may contain SHOPPING-kind lists; those lists are dropped and
+     * their records merge into the default todo list, matching the on-device v1->v2 migration.
+     */
+    private fun legacyShoppingListIds(document: BackupDocument): Set<String> =
+        document.lists.filter { it.kind == "SHOPPING" }.map { it.id }.toSet()
+
+    private fun effectiveListId(item: BackupItem, legacyShopping: Set<String>): String =
+        if (item.listId in legacyShopping) DEFAULT_TODO else item.listId
+
     private suspend fun previewLocked(document: BackupDocument): BackupPreview {
+        val legacyShopping = legacyShoppingListIds(document)
+        val importedLists = document.lists.filter { it.id !in legacyShopping }
         val localLists = dao.lists().associateBy { it.id }
-        val localKinds = localLists.mapValues { ListKind.valueOf(it.value.kind) }.toMutableMap()
-        val autoDefaults = HashSet<String>()
-        if (localKinds.putIfAbsent(DEFAULT_TODO, ListKind.TODO) == null) autoDefaults += DEFAULT_TODO
-        if (localKinds.putIfAbsent(DEFAULT_SHOPPING, ListKind.SHOPPING) == null) autoDefaults += DEFAULT_SHOPPING
-        document.lists.forEach { list ->
-            val existing = localKinds[list.id]
-            if (existing != null && existing != list.kind) {
-                throw BackupException("清单 ID 与本机类型冲突")
-            }
-            localKinds[list.id] = list.kind
-        }
+        val knownListIds = localLists.keys + importedLists.map { it.id } + DEFAULT_TODO
         document.items.forEach { item ->
-            val kind = localKinds[item.listId] ?: throw BackupException("记录引用的清单不存在")
-            requireTodoFields(kind, item)
+            if (effectiveListId(item, legacyShopping) !in knownListIds) {
+                throw BackupException("记录引用的清单不存在")
+            }
         }
         val localItemIds = dao.allItemIds().toHashSet()
-        val newLists = document.lists.count {
-            !localLists.containsKey(it.id) && it.id !in autoDefaults
-        }
+        val newLists = importedLists.count { !localLists.containsKey(it.id) && it.id != DEFAULT_TODO }
         val newItems = document.items.count { it.id !in localItemIds }
         return BackupPreview(
             totalLists = document.lists.size,
@@ -76,37 +76,30 @@ class RoomBackupRepository(private val db: AppDatabase) : BackupRepository {
 
     override suspend fun merge(document: BackupDocument): BackupMergeReport = db.withTransaction {
         ensureDefaults()
+        val legacyShopping = legacyShoppingListIds(document)
+        val importedLists = document.lists.filter { it.id !in legacyShopping }
         val localLists = dao.lists().associateBy { it.id }
-        val kinds = localLists.mapValues { ListKind.valueOf(it.value.kind) }.toMutableMap()
-        document.lists.forEach { list ->
-            val existing = kinds[list.id]
-            if (existing != null && existing != list.kind) {
-                throw BackupException("清单 ID 与本机类型冲突")
-            }
-            kinds[list.id] = list.kind
-        }
+        val knownListIds = localLists.keys + importedLists.map { it.id } + DEFAULT_TODO
         document.items.forEach { item ->
-            val kind = kinds[item.listId] ?: throw BackupException("记录引用的清单不存在")
-            requireTodoFields(kind, item)
+            if (effectiveListId(item, legacyShopping) !in knownListIds) {
+                throw BackupException("记录引用的清单不存在")
+            }
         }
 
         var addedLists = 0
         var addedItems = 0
         var skipped = 0
-        val namesByKind = localLists.values.groupBy { ListKind.valueOf(it.kind) }
-            .mapValues { (_, lists) -> lists.map { Validation.listNameKey(it.name) }.toMutableSet() }
-            .toMutableMap()
+        val existingNames = localLists.values.map { Validation.listNameKey(it.name) }.toMutableSet()
 
-        document.lists.forEach { list ->
+        importedLists.forEach { list ->
             if (dao.list(list.id) != null) {
                 skipped++
                 return@forEach
             }
             val baseName = Validation.normalizeListName(list.name)
-            val name = uniqueListName(baseName, namesByKind.getOrPut(list.kind) { mutableSetOf() })
+            val name = uniqueListName(baseName, existingNames)
             dao.insertList(ListEntity(
                 id = list.id,
-                kind = list.kind.name,
                 name = name,
                 normalizedName = Validation.listNameKey(name),
                 isDefault = list.isDefault,
@@ -114,7 +107,7 @@ class RoomBackupRepository(private val db: AppDatabase) : BackupRepository {
                 updatedAt = list.updatedAt,
                 version = 1
             ))
-            namesByKind.getValue(list.kind).add(Validation.listNameKey(name))
+            existingNames.add(Validation.listNameKey(name))
             addedLists++
         }
 
@@ -124,21 +117,18 @@ class RoomBackupRepository(private val db: AppDatabase) : BackupRepository {
                 skipped++
                 return@forEach
             }
-            val list = dao.list(item.listId) ?: throw BackupException("记录引用的清单不存在")
-            val kind = ListKind.valueOf(list.kind)
+            val listId = effectiveListId(item, legacyShopping)
+            val list = dao.list(listId) ?: throw BackupException("记录引用的清单不存在")
             val normalized = try {
-                Validation.normalize(ItemInput(item.listId, item.title, item.note,
-                    item.quantityDecimal.orEmpty(), item.unit.orEmpty(), item.pinned), kind)
+                Validation.normalize(ItemInput(listId, item.title, item.note, item.pinned))
             } catch (e: ValidationException) {
                 throw BackupException("记录字段无效：${e.message}")
             }
             dao.insertItem(ItemEntity(
                 id = item.id,
-                listId = item.listId,
+                listId = list.id,
                 title = normalized.title,
                 note = normalized.note,
-                quantityDecimal = normalized.quantity.ifEmpty { null },
-                unit = normalized.unit.ifEmpty { null },
                 completed = item.completed,
                 pinned = item.pinned,
                 sortKey = item.sortKey,
@@ -151,12 +141,6 @@ class RoomBackupRepository(private val db: AppDatabase) : BackupRepository {
             addedItems++
         }
         BackupMergeReport(addedLists, addedItems, skipped)
-    }
-
-    private fun requireTodoFields(kind: ListKind, item: BackupItem) {
-        if (kind == ListKind.TODO && (item.quantityDecimal != null || item.unit != null)) {
-            throw BackupException("待办不能含购物数量")
-        }
     }
 
     private fun uniqueListName(base: String, existing: MutableSet<String>): String {

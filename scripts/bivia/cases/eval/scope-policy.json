@@ -1,0 +1,64 @@
+{
+  "cases": [
+    {
+      "id": "scope-widget-layout",
+      "type": "multi_select",
+      "domain": "Android CI test scope selection",
+      "question": "本次改动最低需要运行哪些测试/验证？",
+      "options": [
+        "JVM 单元测试",
+        "设备 instrumentation",
+        "小部件/桌面手工验证",
+        "更新/安装手工验证",
+        "真机设备矩阵（API26/31/36、HyperOS）",
+        "性能 P95",
+        "仅文档审阅，不需要代码测试"
+      ],
+      "expected": [
+        "JVM 单元测试",
+        "设备 instrumentation",
+        "小部件/桌面手工验证"
+      ],
+      "state": "改动：v0.3.2 小部件缩小与超紧凑密度。\n代码文件：Models.kt、WidgetConfigureActivity.kt、WidgetLayout.kt、WidgetRenderer.kt、WidgetUpdateCoordinator.kt，以及 widget_content_ultra.xml、widget_row_ultra.xml、widget_large_info.xml、widget_small_info.xml。\n测试文件：FrameworkUiTest.kt（+56 行）、WidgetRenderingTest.kt（+50/- 行）。\n影响面：小部件尺寸、密度、布局、配置页；不涉及数据库 schema、备份、更新下载。\n\n项目测试基线：\n- 任何 app/src 代码改动先跑 JVM 单元测试。\n- 影响 Android 运行时、UI、Manifest 或资源时加设备 instrumentation。\n- 小部件布局或配置改动加小部件/桌面手工验证。\n- 更新下载或安装改动加更新/安装手工验证。\n- 真机设备矩阵和性能 P95 是发布门槛，不是每次改动必跑。\n- 纯文档改动只需文档审阅。"
+    },
+    {
+      "id": "scope-update-download",
+      "type": "multi_select",
+      "domain": "Android CI test scope selection",
+      "question": "本次改动最低需要运行哪些测试/验证？",
+      "options": [
+        "JVM 单元测试",
+        "设备 instrumentation",
+        "小部件/桌面手工验证",
+        "更新/安装手工验证",
+        "真机设备矩阵（API26/31/36、HyperOS）",
+        "性能 P95",
+        "仅文档审阅，不需要代码测试"
+      ],
+      "expected": [
+        "JVM 单元测试",
+        "更新/安装手工验证"
+      ],
+      "state": "改动：客户端内下载更新 APK，流式校验 SHA256，完成后调起系统安装器。\n代码文件：ApkDownloader.kt、UpdateCenter.kt、UpdateChecker.kt、InstallApk.kt、AndroidManifest.xml、file_paths.xml。\n测试文件：ApkDownloaderTest.kt（+255 行）、UpdateCenterTest.kt（+170 行）。\n影响面：网络下载、哈希校验、缓存文件、未知来源安装权限；不涉及小部件布局和数据库 schema。\n\n项目测试基线：\n- 任何 app/src 代码改动先跑 JVM 单元测试。\n- 影响 Android 运行时、UI、Manifest 或资源时加设备 instrumentation。\n- 小部件布局或配置改动加小部件/桌面手工验证。\n- 更新下载或安装改动加更新/安装手工验证。\n- 真机设备矩阵和性能 P95 是发布门槛，不是每次改动必跑。\n- 纯文档改动只需文档审阅。"
+    },
+    {
+      "id": "scope-docs-only",
+      "type": "multi_select",
+      "domain": "Android CI test scope selection",
+      "question": "本次改动最低需要运行哪些测试/验证？",
+      "options": [
+        "JVM 单元测试",
+        "设备 instrumentation",
+        "小部件/桌面手工验证",
+        "更新/安装手工验证",
+        "真机设备矩阵（API26/31/36、HyperOS）",
+        "性能 P95",
+        "仅文档审阅，不需要代码测试"
+      ],
+      "expected": [
+        "仅文档审阅，不需要代码测试"
+      ],
+      "state": "改动：关闭负一屏范围，更新准入结论。\n文件：README.md、docs/01-product.md、docs/03-acceptance.md、docs/04-agent-tasks.md、docs/05-dev-prompt.md、docs/07-framework-status.md、docs/development-log.md。\n没有修改 app/src 下的代码、资源、Gradle 配置或测试。\n\n项目测试基线：\n- 任何 app/src 代码改动先跑 JVM 单元测试。\n- 影响 Android 运行时、UI、Manifest 或资源时加设备 instrumentation。\n- 小部件布局或配置改动加小部件/桌面手工验证。\n- 更新下载或安装改动加更新/安装手工验证。\n- 真机设备矩阵和性能 P95 是发布门槛，不是每次改动必跑。\n- 纯文档改动只需文档审阅。"
+    }
+  ]
+}

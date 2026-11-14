@@ -18,13 +18,13 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
     private suspend fun ensureDefaults() {
         val time = System.currentTimeMillis()
         dao.insertLists(listOf(
-            ListEntity(DEFAULT_TODO, "TODO", "随手待办", "随手待办", true, time, time),
-            ListEntity(DEFAULT_SHOPPING, "SHOPPING", "日常采购", "日常采购", true, time, time)
+            ListEntity(DEFAULT_TODO, "随手待办", "随手待办", true, time, time)
         ))
     }
 
     override fun observeLists() = dao.observeLists().map { rows -> rows.map { it.model() } }
     override fun observeListCounts() = dao.observeListCounts().map { rows -> rows.associate { it.listId to it.count } }
+    override fun observeActiveListCounts() = dao.observeActiveListCounts().map { rows -> rows.associate { it.listId to it.count } }
     override fun observeActiveCount(listId: String) = dao.observeActiveCount(listId)
     override fun observeCompletedCount(listId: String) = dao.observeCompletedCount(listId)
     override fun observeItems(listId: String, completed: Boolean, search: String) =
@@ -69,11 +69,10 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
         requireCommandId(commandId)
         replayCommand(commandId)?.let { return@mutate it }
         val list = dao.list(input.listId) ?: return@mutate MutationResult.NotFound
-        val normalized = Validation.normalize(input, ListKind.valueOf(list.kind))
+        val normalized = Validation.normalize(input)
         val id = UUID.randomUUID().toString()
         val time = System.currentTimeMillis()
-        dao.insertItem(ItemEntity(id, normalized.listId, normalized.title, normalized.note,
-            normalized.quantity.ifEmpty { null }, normalized.unit.ifEmpty { null }, false,
+        dao.insertItem(ItemEntity(id, normalized.listId, normalized.title, normalized.note, false,
             normalized.pinned, nextSortKey(normalized.listId), time, time))
         dao.insertCommand(AppliedCommand(commandId, JSONArray(listOf(id)).toString(), time))
         MutationResult.Success(listOf(id))
@@ -83,13 +82,13 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
         requireCommandId(commandId)
         replayCommand(commandId)?.let { return@mutate it }
         val list = dao.list(input.listId) ?: return@mutate MutationResult.NotFound
-        val normalized = Validation.normalizeBatch(input, ListKind.valueOf(list.kind))
+        val normalized = Validation.normalizeBatch(input)
         val time = System.currentTimeMillis()
         var sortKey = dao.maxSortKey(input.listId)
         val entities = normalized.map { item ->
             if (sortKey > Long.MAX_VALUE - 1024) throw ValidationException("清单排序已满，请新建清单")
             sortKey += 1024
-            ItemEntity(UUID.randomUUID().toString(), item.listId, item.title, item.note, null, null,
+            ItemEntity(UUID.randomUUID().toString(), item.listId, item.title, item.note,
                 false, item.pinned, sortKey, time, time)
         }
         dao.insertItems(entities)
@@ -102,9 +101,8 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
         val old = dao.item(id) ?: return@mutate MutationResult.NotFound
         if (old.version != expectedVersion) return@mutate MutationResult.Conflict
         val list = dao.list(input.listId) ?: return@mutate MutationResult.NotFound
-        val normalized = Validation.normalize(input, ListKind.valueOf(list.kind))
+        val normalized = Validation.normalize(input)
         if (dao.edit(id, expectedVersion, normalized.listId, normalized.title, normalized.note,
-                normalized.quantity.ifEmpty { null }, normalized.unit.ifEmpty { null },
                 normalized.pinned, System.currentTimeMillis()) == 0) {
             return@mutate MutationResult.Conflict
         }
@@ -162,15 +160,15 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
         MutationResult.Success(listOf(id))
     }
 
-    override suspend fun createList(kind: ListKind, name: String) = mutate {
+    override suspend fun createList(name: String) = mutate {
         val normalizedName = Validation.normalizeListName(name)
         val key = Validation.listNameKey(normalizedName)
-        if (dao.listByNormalizedName(kind.name, key) != null) {
+        if (dao.listByNormalizedName(key) != null) {
             return@mutate MutationResult.ValidationError("这个名字已经用过了", "name")
         }
         val time = System.currentTimeMillis()
         val id = UUID.randomUUID().toString()
-        dao.insertList(ListEntity(id, kind.name, normalizedName, key, false, time, time))
+        dao.insertList(ListEntity(id, normalizedName, key, false, time, time))
         MutationResult.Success(itemIds = listOf(id), message = "已创建清单")
     }
 
@@ -179,7 +177,7 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
         if (list.version != expectedVersion) return@mutate MutationResult.Conflict
         val normalizedName = Validation.normalizeListName(name)
         val key = Validation.listNameKey(normalizedName)
-        val duplicate = dao.listByNormalizedName(list.kind, key)
+        val duplicate = dao.listByNormalizedName(key)
         if (duplicate != null && duplicate.id != id) {
             return@mutate MutationResult.ValidationError("这个名字已经用过了", "name")
         }
@@ -193,7 +191,8 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
         val source = dao.list(id) ?: return@mutate MutationResult.NotFound
         if (source.isDefault) return@mutate MutationResult.ValidationError("默认清单不可删除", "list")
         if (source.version != expectedVersion) return@mutate MutationResult.Conflict
-        val target = dao.lists().firstOrNull { it.kind == source.kind && it.isDefault }
+        val target = dao.list(DEFAULT_TODO)
+            ?: dao.lists().firstOrNull { it.isDefault }
             ?: return@mutate MutationResult.StorageError
         val time = System.currentTimeMillis()
         val items = dao.allItemsInList(source.id)

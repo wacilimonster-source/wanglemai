@@ -1,0 +1,28 @@
+{
+  "cases": [
+    {
+      "id": "gate-flaky-search",
+      "type": "boolean",
+      "domain": "software testing, Android instrumentation",
+      "question": "这次失败是否由产品代码缺陷导致？",
+      "expected": "no",
+      "state": "测试: com.wanglemai.app.FrameworkUiTest#settingsThemeAndLiteralSearch\n结果: 全量 instrumentation 首跑失败；保持代码不变，同一设备单例重跑 1/1 通过。\n断言: 未找到文本「搜索这份清单…」。\n设备: emulator-5554，Android 14/API34。\n历史: 记录为一次未稳定复现的 UI 测试失败。\n日志摘要: 首次完整运行 43 项中 42 项通过，该用例失败；单例重跑通过。未见产品异常堆栈。"
+    },
+    {
+      "id": "gate-utp-listener",
+      "type": "boolean",
+      "domain": "software testing, Android instrumentation",
+      "question": "这次失败是否由产品代码缺陷导致？",
+      "expected": "no",
+      "state": "测试: Gradle connectedDebugAndroidTest\n结果: 测试执行前中止：Failed to receive the UTP test results。\n断言: UTP test results listener gRPC server 启动失败。\n设备: 本机 Windows + emulator-5554。\n历史: 多次出现，属于本机工具链问题。\n日志摘要: 测试 XML 为 0 失败；改用 adb am instrument 后用例可执行。"
+    },
+    {
+      "id": "gate-known-draft-loss",
+      "type": "boolean",
+      "domain": "Android app, software testing",
+      "question": "该限制是否存在用户输入丢失的可能性？",
+      "expected": "yes",
+      "state": "已知限制：草稿在 onStop 写盘，突然断电前最后 300ms 的输入可能丢失。\n当前保证：正常返回、切换清单、保存失败时保留草稿；没有对突然断电做持久化保证。\n用户影响：极端情况下用户最近输入的文字丢失。"
+    }
+  ]
+}

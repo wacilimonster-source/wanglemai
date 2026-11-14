@@ -24,7 +24,6 @@ data class WidgetLayout(
     val contentGap: Int,
     val contentHeight: Int,
     val capacity: Int,
-    val quantityWidth: Int,
     val showCount: Boolean
 ) {
     val compact: Boolean get() = density != WidgetDensity.COMFORTABLE
@@ -66,15 +65,9 @@ data class WidgetLayout(
             val gap = if (full) 0 else headerGap
             val contentHeight = (height - padding * 2 - control * (if (full) 2 else 1) - gap)
                 .coerceAtLeast(0)
-            val quantityDp = when {
-                size.width < 240 -> 0
-                size.width < 280 -> 48
-                compact -> 56
-                else -> 64
-            }
             return WidgetLayout(size.width, size.height, density, full,
                 dp(if (ultra) 8 else if (compact) 12 else 16), padding, control, row, gap, contentHeight,
-                (contentHeight / row).coerceIn(0, 12), dp(quantityDp),
+                (contentHeight / row).coerceIn(0, 12),
                 size.width >= 240 && context.resources.configuration.fontScale < 1.3f)
         }
     }

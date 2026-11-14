@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 interface ItemRepository {
     fun observeLists(): Flow<List<TaskList>>
     fun observeListCounts(): Flow<Map<String, Int>>
+    fun observeActiveListCounts(): Flow<Map<String, Int>>
     fun observeActiveCount(listId: String): Flow<Int>
     fun observeCompletedCount(listId: String): Flow<Int>
     fun observeItems(listId: String, completed: Boolean, search: String): Flow<List<Item>>
@@ -20,7 +21,7 @@ interface ItemRepository {
     suspend fun undoWidgetCompletion(widgetId: Int, commandId: String): MutationResult
     suspend fun delete(id: String, expectedVersion: Long): MutationResult
 
-    suspend fun createList(kind: ListKind, name: String): MutationResult
+    suspend fun createList(name: String): MutationResult
     suspend fun renameList(id: String, expectedVersion: Long, name: String): MutationResult
     suspend fun deleteListAndMoveToDefault(id: String, expectedVersion: Long): MutationResult
 

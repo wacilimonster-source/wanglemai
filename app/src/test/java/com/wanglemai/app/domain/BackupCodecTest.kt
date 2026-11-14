@@ -12,25 +12,21 @@ class BackupCodecTest {
 
     private fun list(
         id: String = listId,
-        kind: ListKind = ListKind.SHOPPING,
-        name: String = "周末采购",
+        name: String = "工作",
         isDefault: Boolean = false
-    ) = BackupList(id, kind, name, isDefault, now, now)
+    ) = BackupList(id, "TODO", name, isDefault, now, now)
 
     private fun item(
         id: String = itemId,
         listId: String = this.listId,
-        title: String = "牛奶",
-        quantity: String? = "2",
-        unit: String? = "盒",
+        title: String = "取快递",
         completed: Boolean = false
-    ) = BackupItem(id, listId, title, "", quantity, unit, completed, false, 1024,
+    ) = BackupItem(id, listId, title, "", completed, false, 1024,
         now, now, if (completed) now else null)
 
     private fun document(
         lists: List<BackupList> = listOf(
-            BackupList(DEFAULT_TODO, ListKind.TODO, "随手待办", true, now, now),
-            BackupList(DEFAULT_SHOPPING, ListKind.SHOPPING, "日常采购", true, now, now),
+            BackupList(DEFAULT_TODO, "TODO", "随手待办", true, now, now),
             list()
         ),
         items: List<BackupItem> = listOf(item())
@@ -38,12 +34,13 @@ class BackupCodecTest {
 
     @Test fun roundTripPreservesFields() {
         val decoded = BackupCodec.decode(BackupCodec.encode(document()))
-        assertEquals(3, decoded.lists.size)
+        assertEquals(2, decoded.lists.size)
         assertEquals(1, decoded.items.size)
-        assertEquals("牛奶", decoded.items.single().title)
-        assertEquals("2", decoded.items.single().quantityDecimal)
-        assertEquals("盒", decoded.items.single().unit)
+        assertEquals("取快递", decoded.items.single().title)
         assertFalse(decoded.items.single().completed)
+        // Exports keep the kind field so pre-v0.4.0 builds can still import the file.
+        assertEquals("TODO", JSONObject(BackupCodec.encode(document()))
+            .getJSONArray("lists").getJSONObject(0).getString("kind"))
     }
 
     @Test fun unknownFieldsAreIgnored() {
@@ -63,8 +60,7 @@ class BackupCodecTest {
 
     @Test fun duplicateListAndItemIdsAreRejected() {
         val duplicateLists = document(lists = listOf(
-            BackupList(DEFAULT_TODO, ListKind.TODO, "随手待办", true, now, now),
-            BackupList(DEFAULT_SHOPPING, ListKind.SHOPPING, "日常采购", true, now, now),
+            BackupList(DEFAULT_TODO, "TODO", "随手待办", true, now, now),
             list(), list(name = "另一份")
         ))
         assertThrows(BackupException::class.java) {
@@ -78,21 +74,56 @@ class BackupCodecTest {
 
     @Test fun defaultFlagsMustMatchBuiltInIds() {
         val bad = document(lists = listOf(
-            BackupList(DEFAULT_TODO, ListKind.TODO, "随手待办", false, now, now),
-            BackupList(DEFAULT_SHOPPING, ListKind.SHOPPING, "日常采购", true, now, now)
+            BackupList(DEFAULT_TODO, "TODO", "随手待办", false, now, now)
         ), items = emptyList())
         assertThrows(BackupException::class.java) { BackupCodec.decode(BackupCodec.encode(bad)) }
         val customDefault = document(lists = listOf(
-            BackupList(DEFAULT_TODO, ListKind.TODO, "随手待办", true, now, now),
-            BackupList(DEFAULT_SHOPPING, ListKind.SHOPPING, "日常采购", true, now, now),
+            BackupList(DEFAULT_TODO, "TODO", "随手待办", true, now, now),
             list(isDefault = true)
         ), items = emptyList())
         assertThrows(BackupException::class.java) { BackupCodec.decode(BackupCodec.encode(customDefault)) }
     }
 
-    @Test fun todoCannotCarryShoppingMetadata() {
-        val bad = document(items = listOf(item(listId = DEFAULT_TODO, quantity = "2", unit = "盒")))
-        assertThrows(BackupException::class.java) { BackupCodec.decode(BackupCodec.encode(bad)) }
+    /** Legacy kind values survive decode so the merge step can convert them. */
+    @Test fun legacyShoppingKindIsAccepted() {
+        val json = JSONObject(BackupCodec.encode(document())).apply {
+            getJSONArray("lists").getJSONObject(0).put("kind", "TODO")
+        }
+        assertEquals("TODO", BackupCodec.decode(json.toString()).lists.first().kind)
+    }
+
+    @Test fun unknownKindIsRejected() {
+        val json = JSONObject(BackupCodec.encode(document())).apply {
+            getJSONArray("lists").getJSONObject(1).put("kind", "ARCHIVE")
+        }
+        assertThrows(BackupException::class.java) { BackupCodec.decode(json.toString()) }
+    }
+
+    /** Pre-v0.4.0 backups carry quantity/unit on items; decode tolerates and drops them. */
+    @Test fun legacyQuantityFieldsAreToleratedAndDropped() {
+        val json = JSONObject(BackupCodec.encode(document())).apply {
+            val entry = getJSONArray("items").getJSONObject(0)
+            entry.put("quantityDecimal", "1e2")
+            entry.put("unit", "盒")
+        }
+        val decoded = BackupCodec.decode(json.toString())
+        assertEquals(1, decoded.items.size)
+        assertEquals("取快递", decoded.items.single().title)
+    }
+
+    @Test fun legacyDefaultShoppingListMarkerIsValid() {
+        val json = JSONObject(BackupCodec.encode(document())).apply {
+            val lists = getJSONArray("lists")
+            lists.getJSONObject(0).put("kind", "TODO")
+            lists.put(JSONObject()
+                .put("id", DEFAULT_SHOPPING)
+                .put("kind", "SHOPPING")
+                .put("name", "日常采购")
+                .put("isDefault", true)
+                .put("createdAt", now)
+                .put("updatedAt", now))
+        }
+        assertEquals(3, BackupCodec.decode(json.toString()).lists.size)
     }
 
     @Test fun completionTimestampMustBeConsistent() {
@@ -102,10 +133,7 @@ class BackupCodecTest {
         assertThrows(BackupException::class.java) { BackupCodec.decode(BackupCodec.encode(restored)) }
     }
 
-    @Test fun maliciousQuantityAndIdsAreRejected() {
-        assertThrows(BackupException::class.java) {
-            BackupCodec.decode(BackupCodec.encode(document(items = listOf(item(quantity = "1e2")))))
-        }
+    @Test fun malformedItemIdsAreRejected() {
         assertThrows(BackupException::class.java) {
             BackupCodec.decode(BackupCodec.encode(document(items = listOf(item(id = "not-a-uuid")))))
         }
@@ -121,8 +149,7 @@ class BackupCodecTest {
 
     @Test fun listNameCannotExceedTwentyCodePoints() {
         val bad = document(lists = listOf(
-            BackupList(DEFAULT_TODO, ListKind.TODO, "随手待办", true, now, now),
-            BackupList(DEFAULT_SHOPPING, ListKind.SHOPPING, "日常采购", true, now, now),
+            BackupList(DEFAULT_TODO, "TODO", "随手待办", true, now, now),
             list(name = "😀".repeat(21))
         ), items = emptyList())
         assertThrows(BackupException::class.java) { BackupCodec.decode(BackupCodec.encode(bad)) }
@@ -130,8 +157,7 @@ class BackupCodecTest {
 
     @Test fun listNameCannotContainLineBreaks() {
         val bad = document(lists = listOf(
-            BackupList(DEFAULT_TODO, ListKind.TODO, "随手待办", true, now, now),
-            BackupList(DEFAULT_SHOPPING, ListKind.SHOPPING, "日常采购", true, now, now),
+            BackupList(DEFAULT_TODO, "TODO", "随手待办", true, now, now),
             list(name = "第一行\n第二行")
         ), items = emptyList())
         assertThrows(BackupException::class.java) { BackupCodec.decode(BackupCodec.encode(bad)) }
@@ -166,7 +192,7 @@ class BackupCodecTest {
         for (i in 0..BACKUP_MAX_ITEMS) {
             root.getJSONArray("items").put(JSONObject()
                 .put("id", String.format("%08d-2222-3333-4444-555555555555", i))
-                .put("listId", DEFAULT_SHOPPING)
+                .put("listId", DEFAULT_TODO)
                 .put("title", "记录$i")
                 .put("note", "")
                 .put("quantityDecimal", JSONObject.NULL)

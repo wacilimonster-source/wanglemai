@@ -1,0 +1,31 @@
+{
+  "cases": [
+    {
+      "id": "claim-1-draft-race",
+      "type": "choice",
+      "domain": "Android Kotlin code review, software testing",
+      "question": "当前代码与现有测试是否支持这条缺陷声明？",
+      "choices": ["成立", "误报", "证据不足"],
+      "expected": "证据不足",
+      "state": "缺陷声明：保存冲突处理存在竞态：pendingLatestVersion 可能被其他操作覆盖；writeDraft 使用旧 epoch 写过期草稿；缺少 @Volatile 可能导致可见性问题，最终丢失最新数据。\n\n当前代码：\n- pendingLatestVersion 只在保存/删除失败分支的主线程恢复段赋值（EditorViewModel.kt:311-323、354-363）。\n- save() 在启动异步保存前同步设置 busy=true；canSave 同时检查 busy 和 conflict（247-257、269-270）。\n- writeDraft 在 draftMutex 内先校验 epoch != draftEpoch 并拒绝过期任务（213-217）。\n- 冲突后 UI 禁用字段和清单切换；用户必须选择保留草稿、覆盖或载入最新。\n- 现有测试：FrameworkUiTest.staleDraftSaveShowsConflictAndCanReloadLatest。编辑后外部更新，保存显示“这条记录已在别处更新，你的草稿已保留”，草稿仍在，可“载入最新记录”，取消后草稿清除。"
+    },
+    {
+      "id": "claim-2-sortkey-overflow",
+      "type": "choice",
+      "domain": "Android Kotlin code review, software testing",
+      "question": "当前代码与现有测试是否支持这条缺陷声明？",
+      "choices": ["成立", "误报", "证据不足"],
+      "expected": "误报",
+      "state": "缺陷声明：createBatch 的 sortKey 边界检查在递增前执行；当 sortKey == Long.MAX_VALUE-1023 时检查通过，随后 +1024 溢出为负数，导致排序错乱。\n\n当前代码：\nvar sortKey = dao.maxSortKey(input.listId)\nval entities = normalized.map { item ->\n    if (sortKey > Long.MAX_VALUE - 1024) throw ValidationException(\"清单排序已满，请新建清单\")\n    sortKey += 1024\n    ItemEntity(...)\n}\n批量实体全部构造完成后才 dao.insertItems(entities)，整个操作在 mutate 事务内。\n\n现有测试：\n- batchAcceptsLastRepresentableSortKey：MAX-1024 时批量一条得到 MAX，合法。\n- batchRejectsOverflowWithoutWritingItemsOrCommand：MAX-1024 时两条中的第二条被拒绝；MAX-1023 时单条也被拒绝；记录数不变，command 未写入。"
+    },
+    {
+      "id": "claim-3-widget-error-residue",
+      "type": "choice",
+      "domain": "Android Kotlin code review, software testing",
+      "question": "当前代码与现有测试是否支持这条缺陷声明？",
+      "choices": ["成立", "误报", "证据不足"],
+      "expected": "误报",
+      "state": "缺陷声明：Widget 刷新成功后，之前的“暂时无法读取”错误提示仍留在 transientMessages，导致错误长期显示。\n\n当前代码：\n- refresh(widgetId) 在 mutex 内先 transientMessages.remove(widgetId)，再 renderLocked(widgetId)。\n- showError(widgetId) 只调用 renderErrorLocked，不写 transientMessages。\n- 只有 showMessage(widgetId, message) 会写 transientMessages。\n\n现有测试：normalRefreshClearsFeedbackAndReplacesErrorLayout。真实 AppWidgetHost 下显示临时提示，refresh 后提示消失；showError 显示“暂时无法读取 · 点此重试”，refresh 后错误布局消失。"
+    }
+  ]
+}

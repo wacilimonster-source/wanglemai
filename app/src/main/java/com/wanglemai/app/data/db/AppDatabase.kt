@@ -11,10 +11,10 @@ data class ListCountRow(
 @Dao
 interface AppDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertLists(lists: List<ListEntity>)
-    @Query("SELECT * FROM lists ORDER BY kind DESC, createdAt, id") fun observeLists(): Flow<List<ListEntity>>
-    @Query("SELECT * FROM lists ORDER BY kind DESC, createdAt, id") suspend fun lists(): List<ListEntity>
+    @Query("SELECT * FROM lists ORDER BY createdAt, id") fun observeLists(): Flow<List<ListEntity>>
+    @Query("SELECT * FROM lists ORDER BY createdAt, id") suspend fun lists(): List<ListEntity>
     @Query("SELECT * FROM lists WHERE id=:id") suspend fun list(id: String): ListEntity?
-    @Query("SELECT * FROM lists WHERE kind=:kind AND normalizedName=:normalizedName") suspend fun listByNormalizedName(kind: String, normalizedName: String): ListEntity?
+    @Query("SELECT * FROM lists WHERE normalizedName=:normalizedName") suspend fun listByNormalizedName(normalizedName: String): ListEntity?
     @Insert suspend fun insertList(list: ListEntity)
     @Query("UPDATE lists SET name=:name, normalizedName=:normalizedName, updatedAt=:time, version=version+1 WHERE id=:id AND version=:version")
     suspend fun renameList(id: String, version: Long, name: String, normalizedName: String, time: Long): Int
@@ -30,9 +30,9 @@ interface AppDao {
     @Query("SELECT COALESCE(MAX(sortKey),0) FROM items WHERE listId=:listId") suspend fun maxSortKey(listId: String): Long
     @Insert suspend fun insertItem(item: ItemEntity)
     @Insert suspend fun insertItems(items: List<ItemEntity>)
-    @Query("UPDATE items SET listId=:listId,title=:title,note=:note,quantityDecimal=:quantity,unit=:unit,pinned=:pinned,updatedAt=:time,version=version+1 WHERE id=:id AND version=:version AND deletedAt IS NULL")
+    @Query("UPDATE items SET listId=:listId,title=:title,note=:note,pinned=:pinned,updatedAt=:time,version=version+1 WHERE id=:id AND version=:version AND deletedAt IS NULL")
     suspend fun edit(id: String, version: Long, listId: String, title: String, note: String,
-        quantity: String?, unit: String?, pinned: Boolean, time: Long): Int
+        pinned: Boolean, time: Long): Int
     @Query("UPDATE items SET completed=:completed,completedAt=:completedAt,updatedAt=:time,version=version+1 WHERE id=:id AND version=:version AND deletedAt IS NULL")
     suspend fun complete(id: String, version: Long, completed: Boolean, completedAt: Long?, time: Long): Int
     @Query("UPDATE items SET deletedAt=:time,updatedAt=:time,version=version+1 WHERE id=:id AND version=:version AND deletedAt IS NULL")
@@ -47,6 +47,7 @@ interface AppDao {
     @Query("SELECT COUNT(*) FROM items WHERE listId=:listId AND completed=0 AND deletedAt IS NULL") fun observeActiveCount(listId: String): Flow<Int>
     @Query("SELECT COUNT(*) FROM items WHERE listId=:listId AND completed=1 AND deletedAt IS NULL") fun observeCompletedCount(listId: String): Flow<Int>
     @Query("SELECT listId, COUNT(*) AS count FROM items WHERE deletedAt IS NULL GROUP BY listId") fun observeListCounts(): Flow<List<ListCountRow>>
+    @Query("SELECT listId, COUNT(*) AS count FROM items WHERE completed=0 AND deletedAt IS NULL GROUP BY listId") fun observeActiveListCounts(): Flow<List<ListCountRow>>
     @Query("SELECT COUNT(*) FROM items WHERE listId=:listId AND deletedAt IS NULL") suspend fun itemCount(listId: String): Int
 
     @Query("SELECT * FROM applied_commands WHERE commandId=:id") suspend fun command(id: String): AppliedCommand?
@@ -81,5 +82,5 @@ interface AppDao {
 }
 
 @Database(entities = [ListEntity::class, ItemEntity::class, WidgetConfig::class,
-    WidgetUndo::class, AppliedCommand::class, DraftEntity::class, PreferenceEntity::class], version = 1, exportSchema = true)
+    WidgetUndo::class, AppliedCommand::class, DraftEntity::class, PreferenceEntity::class], version = 2, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() { abstract fun dao(): AppDao }

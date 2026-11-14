@@ -4,7 +4,11 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-/** Strict schema-1 backup reader/writer. Unknown fields are ignored; unknown versions/types are rejected. */
+/**
+ * Strict schema-1 backup reader/writer. Unknown fields are ignored; unknown versions are rejected.
+ * Since v0.4.0 there is a single list kind: exports always write `kind: "TODO"`, while imports still
+ * tolerate legacy `kind: "SHOPPING"` lists and quantity fields for conversion on merge.
+ */
 object BackupCodec {
     private const val MAX_SAFE_INTEGER = 9007199254740991L
     private const val MAX_JSON_DEPTH = 64
@@ -21,7 +25,8 @@ object BackupCodec {
                 document.lists.forEach { list ->
                     put(JSONObject()
                         .put("id", list.id)
-                        .put("kind", list.kind.name)
+                        // Kept so that pre-v0.4.0 builds (which require the field) can still import new backups.
+                        .put("kind", "TODO")
                         .put("name", list.name)
                         .put("isDefault", list.isDefault)
                         .put("createdAt", list.createdAt)
@@ -35,8 +40,6 @@ object BackupCodec {
                         .put("listId", item.listId)
                         .put("title", item.title)
                         .put("note", item.note)
-                        .put("quantityDecimal", item.quantityDecimal ?: JSONObject.NULL)
-                        .put("unit", item.unit ?: JSONObject.NULL)
                         .put("completed", item.completed)
                         .put("pinned", item.pinned)
                         .put("sortKey", item.sortKey)
@@ -82,9 +85,8 @@ object BackupCodec {
             val obj = objectAt(listArray, i, "清单字段无效或 ID 重复")
             val id = string(obj, "id")
             if (!isListId(id) || !listIds.add(id)) throw BackupException("清单字段无效或 ID 重复")
-            val kind = try {
-                ListKind.valueOf(string(obj, "kind"))
-            } catch (_: IllegalArgumentException) {
+            val kind = if (obj.has("kind")) string(obj, "kind") else null
+            if (kind != null && kind != "TODO" && kind != "SHOPPING") {
                 throw BackupException("清单字段无效或 ID 重复")
             }
             val name = try {
@@ -94,8 +96,8 @@ object BackupCodec {
             }
             val isDefault = bool(obj, "isDefault")
             val expectedDefault = when (id) {
-                DEFAULT_TODO -> kind == ListKind.TODO
-                DEFAULT_SHOPPING -> kind == ListKind.SHOPPING
+                DEFAULT_TODO -> kind == null || kind == "TODO"
+                DEFAULT_SHOPPING -> kind == "SHOPPING"
                 else -> false
             }
             if (isDefault != expectedDefault) throw BackupException("默认清单标记无效")
@@ -105,7 +107,6 @@ object BackupCodec {
             )
         }
 
-        val documentKinds = lists.associate { it.id to it.kind }
         val itemIds = HashSet<String>()
         val items = ArrayList<BackupItem>(itemArray.length())
         for (i in 0 until itemArray.length()) {
@@ -127,24 +128,14 @@ object BackupCodec {
             } catch (e: ValidationException) {
                 throw BackupException("记录字段无效：${e.message}")
             }
-            val quantity = nullableString(obj, "quantityDecimal")
-            val unit = nullableString(obj, "unit")
-            try {
-                Validation.normalizeQuantity(quantity.orEmpty(), unit.orEmpty())
-            } catch (e: ValidationException) {
-                throw BackupException(e.message)
-            }
             val completed = bool(obj, "completed")
             val completedAt = nullableLong(obj, "completedAt")
             if (completed && completedAt == null) throw BackupException("完成时间无效")
             if (!completed && completedAt != null) throw BackupException("完成时间无效")
-            val kind = documentKinds[listId]
-            if (kind == ListKind.TODO && (quantity != null || unit != null)) {
-                throw BackupException("待办不能含购物数量")
-            }
+            // Legacy quantityDecimal/unit fields are tolerated and dropped.
             items += BackupItem(
                 id = id, listId = listId, title = title, note = note,
-                quantityDecimal = quantity, unit = unit, completed = completed,
+                completed = completed,
                 pinned = bool(obj, "pinned"), sortKey = safeLong(obj, "sortKey"),
                 createdAt = safeLong(obj, "createdAt"), updatedAt = safeLong(obj, "updatedAt"),
                 completedAt = completedAt
@@ -196,12 +187,6 @@ object BackupCodec {
 
     private fun string(obj: JSONObject, name: String): String {
         if (!obj.has(name)) throw BackupException("备份字段缺失或类型无效")
-        return obj.opt(name) as? String ?: throw BackupException("备份字段缺失或类型无效")
-    }
-
-    private fun nullableString(obj: JSONObject, name: String): String? {
-        if (!obj.has(name)) throw BackupException("备份字段缺失或类型无效")
-        if (obj.isNull(name)) return null
         return obj.opt(name) as? String ?: throw BackupException("备份字段缺失或类型无效")
     }
 

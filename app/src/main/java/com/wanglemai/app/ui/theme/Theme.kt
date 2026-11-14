@@ -5,12 +5,16 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,78 +26,160 @@ import com.wanglemai.app.domain.themeModeOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// Warm-beige palette per docs/visual-refresh/development.md §1:
-// cream background, warm-paper surfaces, caramel accents. Secondary/tertiary roles map to
-// primary so default components never pick up a cool tone; container roles map to surfaceVariant
-// with onSurface text, and surfaceContainer* is explicit so tonalElevation stays warm.
+@Immutable
+data class EditorialPalette(
+    val isDark: Boolean,
+    val bg: Color,
+    val bgDeep: Color,
+    val surface: Color,
+    val surfaceWarm: Color,
+    val soft: Color,
+    val softHover: Color,
+    val text: Color,
+    val muted: Color,
+    val faint: Color,
+    val primary: Color,
+    val primaryDeep: Color,
+    val primarySoft: Color,
+    val onPrimary: Color,
+    val inkIsland: Color,
+    val inkIslandText: Color,
+    val line: Color,
+    val lineStrong: Color,
+    val marginLine: Color,
+    val danger: Color,
+    val dangerSoft: Color
+)
+
+val LightEditorialPalette = EditorialPalette(
+    isDark = false,
+    bg = Color(0xFFF3EDE2),
+    bgDeep = Color(0xFFE7DDD0),
+    surface = Color(0xFFFFFDF9),
+    surfaceWarm = Color(0xFFFAF5EC),
+    soft = Color(0xFFEBE2D4),
+    softHover = Color(0xFFE2D6C5),
+    text = Color(0xFF2A231D),
+    muted = Color(0xFF756757),
+    faint = Color(0xFFA69683),
+    primary = Color(0xFF9A4B26),
+    primaryDeep = Color(0xFF743416),
+    primarySoft = Color(0x1F9A4B26),
+    onPrimary = Color(0xFFFFFAF4),
+    inkIsland = Color(0xFF28211B),
+    inkIslandText = Color(0xFFFBF6EE),
+    line = Color(0xFFE5DBCC),
+    lineStrong = Color(0xFFD2C4B0),
+    marginLine = Color(0x389A4B26),
+    danger = Color(0xFFA6382E),
+    dangerSoft = Color(0xFFF9E5E1)
+)
+
+val DarkEditorialPalette = EditorialPalette(
+    isDark = true,
+    bg = Color(0xFF1E1B18),
+    bgDeep = Color(0xFF171412),
+    surface = Color(0xFF2A2520),
+    surfaceWarm = Color(0xFF312B25),
+    soft = Color(0xFF38312A),
+    softHover = Color(0xFF443B33),
+    text = Color(0xFFF3E9DC),
+    muted = Color(0xFFB7A693),
+    faint = Color(0xFF7D6F5F),
+    primary = Color(0xFFE5B285),
+    primaryDeep = Color(0xFFF2C69E),
+    primarySoft = Color(0x2EE5B285),
+    onPrimary = Color(0xFF2B1F16),
+    inkIsland = Color(0xFFE5B285),
+    inkIslandText = Color(0xFF261C14),
+    line = Color(0xFF423930),
+    lineStrong = Color(0xFF564A3E),
+    marginLine = Color(0x3DE5B285),
+    danger = Color(0xFFFFB4AB),
+    dangerSoft = Color(0xFF5C231C)
+)
+
+val LocalEditorialPalette = staticCompositionLocalOf { LightEditorialPalette }
+
+val EditorialSerif = FontFamily.Serif
+val EditorialMono = FontFamily.Monospace
+
+// Editorial Paper Craft palette synced with prototype/warm/styles.css
 private val Light = lightColorScheme(
-    primary = Color(0xFF8A5335), onPrimary = Color(0xFFFFFAF2),
-    secondary = Color(0xFF8A5335), onSecondary = Color(0xFFFFFAF2),
-    tertiary = Color(0xFF8A5335), onTertiary = Color(0xFFFFFAF2),
-    background = Color(0xFFF6F1E8), onBackground = Color(0xFF383129),
-    surface = Color(0xFFFFFBF4), onSurface = Color(0xFF383129),
-    surfaceVariant = Color(0xFFEDE4D7), onSurfaceVariant = Color(0xFF786B5D),
-    primaryContainer = Color(0xFFEDE4D7), onPrimaryContainer = Color(0xFF383129),
-    secondaryContainer = Color(0xFFEDE4D7), onSecondaryContainer = Color(0xFF383129),
-    tertiaryContainer = Color(0xFFEDE4D7), onTertiaryContainer = Color(0xFF383129),
-    outline = Color(0xFFA08F7C), outlineVariant = Color(0xFFE3D8C8),
-    error = Color(0xFFA33E32), onError = Color(0xFFFFFAF2),
-    errorContainer = Color(0xFFF7DFD8), onErrorContainer = Color(0xFF6E2418),
-    inverseSurface = Color(0xFF383129), inverseOnSurface = Color(0xFFFFFBF4),
-    inversePrimary = Color(0xFFE5B68E), surfaceTint = Color(0xFF8A5335),
-    surfaceContainerLowest = Color(0xFFFFFDF8),
-    surfaceContainerLow = Color(0xFFFCF6EB),
-    surfaceContainer = Color(0xFFF8F0E3),
-    surfaceContainerHigh = Color(0xFFF2E9DB),
-    surfaceContainerHighest = Color(0xFFEDE4D7),
-    surfaceDim = Color(0xFFE5DDCE), surfaceBright = Color(0xFFFFFBF4),
-    scrim = Color(0xFF383129)
+    primary = Color(0xFF9A4B26), onPrimary = Color(0xFFFFFAF4),
+    secondary = Color(0xFF9A4B26), onSecondary = Color(0xFFFFFAF4),
+    tertiary = Color(0xFF9A4B26), onTertiary = Color(0xFFFFFAF4),
+    background = Color(0xFFF3EDE2), onBackground = Color(0xFF2A231D),
+    surface = Color(0xFFFFFDF9), onSurface = Color(0xFF2A231D),
+    surfaceVariant = Color(0xFFEBE2D4), onSurfaceVariant = Color(0xFF756757),
+    primaryContainer = Color(0xFFEBE2D4), onPrimaryContainer = Color(0xFF2A231D),
+    secondaryContainer = Color(0xFFEBE2D4), onSecondaryContainer = Color(0xFF2A231D),
+    tertiaryContainer = Color(0xFFEBE2D4), onTertiaryContainer = Color(0xFF2A231D),
+    outline = Color(0xFFA69683), outlineVariant = Color(0xFFE5DBCC),
+    error = Color(0xFFA6382E), onError = Color(0xFFFFFAF4),
+    errorContainer = Color(0xFFF9E5E1), onErrorContainer = Color(0xFF6E2418),
+    inverseSurface = Color(0xFF28211B), inverseOnSurface = Color(0xFFFBF6EE),
+    inversePrimary = Color(0xFFE5B285), surfaceTint = Color(0xFF9A4B26),
+    surfaceContainerLowest = Color(0xFFFFFDF9),
+    surfaceContainerLow = Color(0xFFFAF5EC),
+    surfaceContainer = Color(0xFFF3EDE2),
+    surfaceContainerHigh = Color(0xFFEBE2D4),
+    surfaceContainerHighest = Color(0xFFE7DDD0),
+    surfaceDim = Color(0xFFE5DBCC), surfaceBright = Color(0xFFFFFDF9),
+    scrim = Color(0xFF241B14)
 )
 
 private val Dark = darkColorScheme(
-    primary = Color(0xFFE5B68E), onPrimary = Color(0xFF34251B),
-    secondary = Color(0xFFE5B68E), onSecondary = Color(0xFF34251B),
-    tertiary = Color(0xFFE5B68E), onTertiary = Color(0xFF34251B),
-    background = Color(0xFF26221E), onBackground = Color(0xFFF4EADC),
-    surface = Color(0xFF332D26), onSurface = Color(0xFFF4EADC),
-    surfaceVariant = Color(0xFF43392F), onSurfaceVariant = Color(0xFFC0AF9B),
-    primaryContainer = Color(0xFF43392F), onPrimaryContainer = Color(0xFFF4EADC),
-    secondaryContainer = Color(0xFF43392F), onSecondaryContainer = Color(0xFFF4EADC),
-    tertiaryContainer = Color(0xFF43392F), onTertiaryContainer = Color(0xFFF4EADC),
-    outline = Color(0xFF8A7B69), outlineVariant = Color(0xFF514438),
-    error = Color(0xFFFFB4A8), onError = Color(0xFF5C1A10),
-    errorContainer = Color(0xFF6E2B20), onErrorContainer = Color(0xFFFFDAD3),
-    inverseSurface = Color(0xFFF4EADC), inverseOnSurface = Color(0xFF332D26),
-    inversePrimary = Color(0xFF8A5335), surfaceTint = Color(0xFFE5B68E),
-    surfaceContainerLowest = Color(0xFF211D19),
-    surfaceContainerLow = Color(0xFF2D2823),
-    surfaceContainer = Color(0xFF332D26),
-    surfaceContainerHigh = Color(0xFF3B342C),
-    surfaceContainerHighest = Color(0xFF43392F),
-    surfaceDim = Color(0xFF1D1A16), surfaceBright = Color(0xFF3B342C),
+    primary = Color(0xFFE5B285), onPrimary = Color(0xFF2B1F16),
+    secondary = Color(0xFFE5B285), onSecondary = Color(0xFF2B1F16),
+    tertiary = Color(0xFFE5B285), onTertiary = Color(0xFF2B1F16),
+    background = Color(0xFF1E1B18), onBackground = Color(0xFFF3E9DC),
+    surface = Color(0xFF2A2520), onSurface = Color(0xFFF3E9DC),
+    surfaceVariant = Color(0xFF38312A), onSurfaceVariant = Color(0xFFB7A693),
+    primaryContainer = Color(0xFF38312A), onPrimaryContainer = Color(0xFFF3E9DC),
+    secondaryContainer = Color(0xFF38312A), onSecondaryContainer = Color(0xFFF3E9DC),
+    tertiaryContainer = Color(0xFF38312A), onTertiaryContainer = Color(0xFFF3E9DC),
+    outline = Color(0xFF7D6F5F), outlineVariant = Color(0xFF423930),
+    error = Color(0xFFFFB4AB), onError = Color(0xFF5C1A10),
+    errorContainer = Color(0xFF5C231C), onErrorContainer = Color(0xFFFFDAD3),
+    inverseSurface = Color(0xFFF3E9DC), inverseOnSurface = Color(0xFF2A2520),
+    inversePrimary = Color(0xFF9A4B26), surfaceTint = Color(0xFFE5B285),
+    surfaceContainerLowest = Color(0xFF171412),
+    surfaceContainerLow = Color(0xFF2A2520),
+    surfaceContainer = Color(0xFF312B25),
+    surfaceContainerHigh = Color(0xFF38312A),
+    surfaceContainerHighest = Color(0xFF443B33),
+    surfaceDim = Color(0xFF171412), surfaceBright = Color(0xFF38312A),
     scrim = Color(0xFF000000)
 )
 
-// Type scale from development.md §字体与尺寸; system font only (weights/sizes per table).
 private val WarmTypography = Typography(
-    headlineSmall = TextStyle(fontSize = 26.sp, lineHeight = 36.sp, fontWeight = FontWeight.Medium),
-    titleLarge = TextStyle(fontSize = 22.sp, lineHeight = 32.sp, fontWeight = FontWeight.Medium),
-    titleMedium = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium),
-    bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontSize = 16.sp, lineHeight = 24.sp),
+    headlineSmall = TextStyle(
+        fontFamily = EditorialSerif,
+        fontSize = 23.sp,
+        lineHeight = 30.sp,
+        fontWeight = FontWeight.Bold
+    ),
+    titleLarge = TextStyle(
+        fontFamily = EditorialSerif,
+        fontSize = 20.sp,
+        lineHeight = 28.sp,
+        fontWeight = FontWeight.Bold
+    ),
+    titleMedium = TextStyle(fontSize = 15.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontSize = 15.sp, lineHeight = 22.sp),
+    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
     bodySmall = TextStyle(fontSize = 12.sp, lineHeight = 18.sp),
-    labelLarge = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
-    labelMedium = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
-    labelSmall = TextStyle(fontSize = 12.sp, lineHeight = 18.sp)
+    labelLarge = TextStyle(fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold),
+    labelMedium = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold),
+    labelSmall = TextStyle(fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium)
 )
 
-// Corner radii from development.md §字体与尺寸: segmented 11, search 14, buttons 15,
-// list group 20, editor sheet top 28. Widget 24dp lives in the background drawables.
 private val WarmShapes = Shapes(
-    extraSmall = RoundedCornerShape(11.dp),
-    small = RoundedCornerShape(14.dp),
-    medium = RoundedCornerShape(15.dp),
-    large = RoundedCornerShape(20.dp),
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(18.dp),
     extraLarge = RoundedCornerShape(28.dp)
 )
 
@@ -120,12 +206,15 @@ fun WanglemaiTheme(
             }
         }
     }
-    MaterialTheme(
-        colorScheme = if (dark) Dark else Light,
-        typography = WarmTypography,
-        shapes = WarmShapes,
-        content = content
-    )
+    val palette = if (dark) DarkEditorialPalette else LightEditorialPalette
+    CompositionLocalProvider(LocalEditorialPalette provides palette) {
+        MaterialTheme(
+            colorScheme = if (dark) Dark else Light,
+            typography = WarmTypography,
+            shapes = WarmShapes,
+            content = content
+        )
+    }
 }
 
 @Composable

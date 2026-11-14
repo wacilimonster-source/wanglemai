@@ -37,7 +37,9 @@ class WidgetPinTest {
     }
 
     private fun tap(text: String) {
-        val node = device.wait(Until.findObject(By.text(text)), 10_000) ?: error("Missing $text")
+        val node = device.wait(Until.findObject(By.text(text)), 8_000)
+            ?: device.wait(Until.findObject(By.desc(text)), 2_000)
+            ?: error("Missing $text")
         node.click()
     }
 
@@ -102,7 +104,7 @@ class WidgetPinTest {
         val wrongProvider = bind(true)
         val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java))
         try {
-            assertNotNull(device.wait(Until.findObject(By.text("＋ 记一条")), 10_000))
+            assertNotNull(device.wait(Until.findObject(By.text("提笔记一笔")), 10_000))
             container.pinning.request(ListSmallProvider::class.java)
             await { container.pinning.state.value.status == WidgetPinStatus.REQUESTING }
             val token = container.pinning.state.value.token!!

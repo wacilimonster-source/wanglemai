@@ -1,22 +1,27 @@
 {
-  "date": "2026-11-07",
+  "date": "2026-11-15",
+  "version": "v0.4.0-visual-study-03",
+  "direction": "Direction A: Warm Notebook & Paper Evolution",
   "engine": "Playwright / headless Edge",
   "checks": [
     "initial four active todo rows",
+    "no legacy bottom navigation bar",
+    "floating dock CTA exists",
+    "three list bookmark chips",
     "two widget instances",
     "completion removes active row",
-    "completion updates widget",
+    "completion updates widget count",
     "undo restores row",
     "search filters list",
     "search empty state",
     "completed filter",
-    "shopping quantities",
-    "editor inherits shopping",
+    "bookmark chip switches list",
     "editor fits phone width",
     "save closes editor",
     "save adds record",
-    "config preview updates size",
-    "theme changes",
+    "manage lists shows 3 lists",
+    "config preview updates to compact mode",
+    "theme changes to dark",
     "native mode disables backdrop blur",
     "no page overflow at 320px",
     "no list horizontal overflow at 320px",
@@ -30,6 +35,5 @@
     "no list horizontal overflow at 1440px",
     "no runtime errors"
   ],
-  "errors": [],
-  "scope": "Browser visual prototype only. Native Android pending implementation."
+  "errors": []
 }

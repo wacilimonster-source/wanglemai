@@ -1,0 +1,24 @@
+{
+  "failures": [
+    {
+      "id": "settings-theme-literal-search-flaky",
+      "test": "com.wanglemai.app.FrameworkUiTest#settingsThemeAndLiteralSearch",
+      "result": "全量 instrumentation 首跑失败；保持代码不变单例重跑 1/1 通过",
+      "assertion": "未找到文本「搜索这份清单…」",
+      "device": "emulator-5554，Android 14/API34",
+      "log_excerpt": "首次完整运行 43 项中 42 项通过，该用例失败；单例重跑通过。未见产品异常堆栈。",
+      "history": "记录为一次未稳定复现的 UI 测试失败",
+      "expected": "测试等待/时序不稳定"
+    },
+    {
+      "id": "connected-test-utp-listener",
+      "test": "Gradle connectedDebugAndroidTest",
+      "result": "测试执行前中止：Failed to receive the UTP test results",
+      "assertion": "UTP test results listener gRPC server 启动失败",
+      "device": "本机 Windows + emulator-5554",
+      "log_excerpt": "测试 XML 为 0 失败；改用 adb am instrument 后用例可执行。",
+      "history": "多次出现，属于本机工具链问题",
+      "expected": "环境/设备问题"
+    }
+  ]
+}

@@ -1,0 +1,229 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "目标版本号（不带 v），例如 0.4.0"
+        required: true
+        type: string
+      release_name:
+        description: "Release 标题（留空则为 忘了没 vX.Y.Z MVP）"
+        required: false
+        type: string
+        default: ""
+      dry_run:
+        description: "只构建和校验，不提交、不打 tag、不发 Release"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_CERT_SHA256: e436a586cde571929d012c964d02a1cca45632abcdb662745b734ddfdb274f06
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release state
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            echo "::error::Release must be dispatched from main (current: $GITHUB_REF)."
+            exit 1
+          fi
+          VERSION="${INPUT_VERSION#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must look like 0.4.0 (got: $INPUT_VERSION)"
+            exit 1
+          fi
+          TAG="v$VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            TAG_COMMIT="$(git rev-parse "$TAG^{commit}")"
+            HEAD_COMMIT="$(git rev-parse HEAD)"
+            if [[ "$TAG_COMMIT" != "$HEAD_COMMIT" ]]; then
+              echo "::error::$TAG already exists at $TAG_COMMIT but HEAD is $HEAD_COMMIT; refusing to move a published tag."
+              exit 1
+            fi
+            echo "RESUMED=true" >> "$GITHUB_ENV"
+            echo "::notice::$TAG already points at HEAD; resuming the release without rebuilding."
+          else
+            echo "RESUMED=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Set up JDK 17
+        if: env.RESUMED != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        if: env.RESUMED != 'true'
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        if: env.RESUMED != 'true'
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        if: env.RESUMED != 'true'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore signing keystore
+        if: env.RESUMED != 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${KEYSTORE_BASE64:-}" ]]; then
+            echo "::error::Missing repository secret ANDROID_DEBUG_KEYSTORE_BASE64. See docs/ci-release.md."
+            exit 1
+          fi
+          mkdir -p "$HOME/.android"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+
+      - name: Bump version
+        if: env.RESUMED != 'true'
+        run: python3 scripts/bump-version.py "$VERSION" --allow-same
+
+      - name: Build and test
+        if: env.RESUMED != 'true'
+        run: bash ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+
+      - name: Stage release artifacts
+        if: env.RESUMED != 'true'
+        env:
+          INPUT_RELEASE_NAME: ${{ inputs.release_name }}
+        run: |
+          set -euo pipefail
+          APK="releases/wanglemai-${VERSION}-debug.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$APK"
+
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [[ -z "$SDK_ROOT" || ! -d "$SDK_ROOT/build-tools" ]]; then
+            echo "::error::Android SDK build-tools not found (ANDROID_HOME=$SDK_ROOT)."
+            exit 1
+          fi
+          APKSIGNER="$(find "$SDK_ROOT/build-tools" -maxdepth 2 -name apksigner | sort -V | tail -1)"
+          if [[ -z "$APKSIGNER" || ! -x "$APKSIGNER" ]]; then
+            echo "::error::apksigner not found under $SDK_ROOT/build-tools."
+            exit 1
+          fi
+          DIGEST="$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1)"
+          if [[ "$DIGEST" != "$EXPECTED_CERT_SHA256" ]]; then
+            echo "::error::APK signing certificate $DIGEST does not match the published releases; in-place updates would fail."
+            exit 1
+          fi
+
+          (
+            cd releases
+            sha256sum -- *.apk | sort -k2 > SHA256SUMS.txt
+          )
+
+          RELEASE_NAME="${INPUT_RELEASE_NAME:-忘了没 v${VERSION} MVP}"
+          python3 scripts/update-manifest.py "v$VERSION" "$APK" --release-name "$RELEASE_NAME"
+
+          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
+          echo "APK_SHA256=$(sha256sum "$APK" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Upload dry-run APK
+        if: env.RESUMED != 'true' && inputs.dry_run == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: wanglemai-${{ inputs.version }}-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+      - name: Upload test reports on failure
+        if: failure() && env.RESUMED != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-test-reports
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+          if-no-files-found: ignore
+
+      - name: Commit release and push tag
+        if: env.RESUMED != 'true' && inputs.dry_run == false
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts "$APK_PATH" releases/SHA256SUMS.txt update/latest.json
+          if git diff --cached --quiet; then
+            echo "::notice::No release changes to commit."
+          else
+            git commit -m "release: v$VERSION"
+          fi
+          git push origin "HEAD:main"
+          if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            git tag -a "$TAG" -m "忘了没 $TAG"
+          fi
+          git push origin "$TAG"
+
+      - name: Publish GitHub release
+        if: inputs.dry_run == false
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RELEASE_NAME: ${{ inputs.release_name }}
+        run: |
+          set -euo pipefail
+          APK="releases/wanglemai-${VERSION}-debug.apk"
+          test -f "$APK" || { echo "::error::missing $APK"; exit 1; }
+          TITLE="${INPUT_RELEASE_NAME:-忘了没 v${VERSION} MVP}"
+          NOTES="docs/release-notes-${VERSION}.md"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE"
+            if [[ -f "$NOTES" ]]; then
+              gh release edit "$TAG" --notes-file "$NOTES"
+            fi
+            gh release upload "$TAG" "$APK" releases/SHA256SUMS.txt --clobber
+          elif [[ -f "$NOTES" ]]; then
+            gh release create "$TAG" "$APK" releases/SHA256SUMS.txt \
+              --title "$TITLE" --notes-file "$NOTES" --latest
+          else
+            gh release create "$TAG" "$APK" releases/SHA256SUMS.txt \
+              --title "$TITLE" --generate-notes --latest
+          fi
+
+      - name: Purge jsDelivr manifest cache
+        if: inputs.dry_run == false
+        continue-on-error: true
+        run: bash scripts/purge-jsdelivr-manifest.sh
+
+      - name: Summary
+        if: always()
+        run: |
+          APK="releases/wanglemai-${VERSION:-unknown}-debug.apk"
+          {
+            echo "## 忘了没 ${TAG:-release}"
+            echo ""
+            echo "- dry_run: \`${{ inputs.dry_run }}\`"
+            echo "- resumed: \`${RESUMED:-unknown}\`"
+            if [[ -f "$APK" ]]; then
+              echo "- APK: \`$APK\`"
+              echo "- SHA256: \`$(sha256sum "$APK" | cut -d' ' -f1)\`"
+            fi
+            echo "- Release: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/${TAG:-unknown}"
+          } >> "$GITHUB_STEP_SUMMARY"

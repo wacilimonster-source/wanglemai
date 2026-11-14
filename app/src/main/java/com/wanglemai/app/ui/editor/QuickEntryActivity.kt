@@ -8,51 +8,49 @@ import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wanglemai.app.domain.ListKind
-import com.wanglemai.app.domain.ThemeMode
-import com.wanglemai.app.ui.theme.WanglemaiTheme
+import com.wanglemai.app.domain.DEFAULT_TODO
+import com.wanglemai.app.domain.TaskList
+import com.wanglemai.app.ui.theme.*
 import kotlinx.coroutines.delay
 
-/** 28% warm-brown scrim behind the editor sheet (development.md §2.2). */
-private val WarmScrim = Color(0xFF383129).copy(alpha = 0.28f)
-
-/** Warm input treatment: background fill, 1dp outlineVariant border, primary 2dp when focused. */
-@Composable
-private fun warmFieldColors() = OutlinedTextFieldDefaults.colors(
-    unfocusedContainerColor = MaterialTheme.colorScheme.background,
-    focusedContainerColor = MaterialTheme.colorScheme.background,
-    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-    focusedBorderColor = MaterialTheme.colorScheme.primary,
-)
+private val WarmScrim = Color(0x521C1610)
 
 class QuickEntryActivity : ComponentActivity() {
     private val editorVm: EditorViewModel by viewModels {
@@ -91,10 +89,13 @@ class QuickEntryActivity : ComponentActivity() {
         }
         setContent {
             val state by editorVm.state.collectAsStateWithLifecycle()
-            // Let the theme own system-bar icon contrast: the sheet is light in light mode,
-            // so the previous unconditional white icons were unreadable.
             WanglemaiTheme(state.theme) {
-                EditorSheet(state, editorVm, onClose = ::closeEditor, onFinish = ::finish)
+                EditorSheet(
+                    state = state,
+                    vm = editorVm,
+                    onClose = ::closeEditor,
+                    onFinish = ::finish
+                )
             }
         }
     }
@@ -139,24 +140,25 @@ private fun EditorSheet(
     LaunchedEffect(vm) {
         vm.events.collect { onFinish() }
     }
+    val palette = LocalEditorialPalette.current
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     var listMenu by remember { mutableStateOf(false) }
     var deleteDialog by remember { mutableStateOf(false) }
 
+    val currentList = state.lists.firstOrNull { it.id == state.listId }
+        ?: state.lists.firstOrNull()
+        ?: TaskList(state.listId.ifBlank { DEFAULT_TODO }, "随手待办", true)
+
     LaunchedEffect(state.loaded, state.focusRequest, state.imeRequest, state.itemMissing) {
         if (state.loaded && !state.itemMissing) {
             delay(120)
             runCatching { focusRequester.requestFocus() }
-            // Create and save-and-continue need the keyboard immediately; edit/read mode
-            // should show the full title and note instead of covering them.
             if (state.imeRequest > 0) {
                 keyboard?.show()
                 delay(220)
                 keyboard?.show()
             } else {
-                // Keep the title focused for hardware keyboards, but do not let the
-                // platform's focus-triggered IME cover an existing record.
                 keyboard?.hide()
                 delay(160)
                 keyboard?.hide()
@@ -164,287 +166,541 @@ private fun EditorSheet(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(WarmScrim)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(WarmScrim)
+    ) {
         Box(
-            Modifier.fillMaxSize().clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { if (!state.busy) onClose() })
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { if (!state.busy) onClose() }
+        )
+
+        val sheetShape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
         Surface(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.94f),
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            color = MaterialTheme.colorScheme.surface
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .imePadding()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
+                ),
+            shape = sheetShape,
+            color = palette.surface,
+            border = BorderStroke(1.dp, palette.lineStrong),
+            shadowElevation = 16.dp
         ) {
-            Column(Modifier.fillMaxSize()) {
-                Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(width = 36.dp, height = 4.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
-                            RoundedCornerShape(2.dp)))
-                }
-                Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        if (state.mode == EditorMode.EDIT) "编辑这一条" else "想到，就记一条。",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.weight(1f)
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 1. Perforated Memo Top Header
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "✦ TEAR-OFF MEMO · DOT GRID",
+                            fontFamily = EditorialMono,
+                            fontSize = 10.sp,
+                            letterSpacing = 1.sp,
+                            color = palette.faint
+                        )
+                        Text(
+                            text = if (state.mode == EditorMode.CREATE) "NO. 01" else "EDIT · REV",
+                            fontFamily = EditorialMono,
+                            fontSize = 10.sp,
+                            letterSpacing = 1.sp,
+                            color = palette.faint
+                        )
+                    }
+                    DashedHorizontalDivider(
+                        color = palette.lineStrong,
+                        strokeWidth = 1.5.dp
                     )
-                    TextButton(onClick = onClose, enabled = !state.busy) { Text("取消") }
                 }
-                Column(
-                    Modifier.weight(1f).verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+
+                // 2. Sheet Title Bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (state.draftRestored && !state.conflict && !state.itemMissing) {
-                        Surface(color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(14.dp)) {
-                            Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                Text("已恢复上次草稿", Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodyMedium)
-                                TextButton(onClick = vm::discardDraft) { Text("丢弃") }
-                            }
+                    Text(
+                        text = if (state.mode == EditorMode.EDIT) "修订这页便签" else "想到，就落笔。",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = palette.text
+                    )
+                    Surface(
+                        onClick = onClose,
+                        enabled = !state.busy,
+                        modifier = Modifier.semantics { contentDescription = "取消" },
+                        shape = RoundedCornerShape(8.dp),
+                        color = palette.surfaceWarm,
+                        border = BorderStroke(1.dp, palette.lineStrong)
+                    ) {
+                        Text(
+                            text = "收起",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = palette.text,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
+                }
+
+                // 3. Banners (Draft Restored / Conflict / Item Missing)
+                if (state.draftRestored && !state.conflict && !state.itemMissing) {
+                    Surface(
+                        color = palette.surfaceWarm,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, palette.lineStrong)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "已恢复上次未保存的草稿",
+                                modifier = Modifier.weight(1f),
+                                fontSize = 12.sp,
+                                color = palette.muted
+                            )
+                            Text(
+                                text = "丢弃草稿",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = palette.primary,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable(enabled = !state.busy, onClick = vm::discardDraft)
+                                    .semantics { contentDescription = "丢弃" }
+                                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                            )
                         }
                     }
-                    if (state.conflict) {
-                        Surface(color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(14.dp)) {
-                            Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                                Text("这条记录已在别处更新，你的草稿已保留。",
-                                    style = MaterialTheme.typography.bodyMedium)
-                                Text("请选择载入最新内容，或明确以草稿覆盖最新版本。",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer)
-                                Row {
-                                    TextButton(onClick = vm::reloadLatest) { Text("载入最新记录") }
-                                    TextButton(onClick = vm::keepDraftOverride) { Text("保留草稿并覆盖") }
+                }
+
+                if (state.conflict) {
+                    Surface(
+                        color = palette.dangerSoft,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, palette.danger.copy(alpha = 0.4f))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "这条记录已在别处更新，你的草稿已保留。",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = palette.danger
+                            )
+                            Text(
+                                text = "请选择载入最新内容，或明确以草稿覆盖最新版本。",
+                                fontSize = 12.sp,
+                                color = palette.muted
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton(onClick = vm::reloadLatest) {
+                                    Text("载入最新记录", fontWeight = FontWeight.Bold)
+                                }
+                                TextButton(onClick = vm::keepDraftOverride) {
+                                    Text("保留草稿并覆盖", fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
                     }
-                    if (state.itemMissing) {
-                        Text("记录已被删除，无法保存。", color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                    }
+                }
 
-                    OutlinedTextField(
-                        value = state.title,
-                        onValueChange = vm::setTitle,
-                        label = { Text(if (state.batch) "每行一条" else "要记的内容") },
-                        placeholder = {
-                            Text(if (state.batch) "换行分隔，最多 50 条" else "有什么想记下来的？")
-                        },
-                        singleLine = !state.batch,
-                        minLines = if (state.batch) 4 else 1,
-                        maxLines = if (state.batch) 10 else 1,
-                        enabled = state.loaded && !state.busy && !state.itemMissing,
-                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                        textStyle = TextStyle(fontSize = 20.sp, lineHeight = 30.sp),
-                        colors = warmFieldColors(),
-                        keyboardOptions = KeyboardOptions(
-                            imeAction = if (state.batch) ImeAction.Default else ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(onDone = { vm.save() })
+                if (state.itemMissing) {
+                    Text(
+                        text = "记录已被删除，无法保存。",
+                        color = palette.danger,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                     )
-                    if (state.mode == EditorMode.CREATE) {
-                        val batchLines = remember(state.title) {
-                            Regex("\\r\\n|\\n|\\r").split(state.title)
-                                .count { it.trim().isNotEmpty() }
-                        }
-                        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(
-                            enabled = !state.busy
-                        ) { vm.setBatch(!state.batch) },
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Switch(checked = state.batch, onCheckedChange = vm::setBatch,
-                                enabled = !state.busy)
-                            Spacer(Modifier.width(8.dp))
-                            Text("每行生成一条", style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f))
-                            if (state.batch) {
-                                Text(
-                                    if (batchLines == 0) "最多 50 条" else "将生成 $batchLines 条",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                        Text(
-                            if (state.batch) "每行一条，超过 50 条不会保存"
-                            else "单条最多 200 字；备注最多 2000 字",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                }
 
-                    Text("放进哪份清单", style = MaterialTheme.typography.labelLarge)
-                    Box {
-                        Button(
-                            onClick = { listMenu = true },
-                            enabled = state.loaded && !state.busy && !state.itemMissing,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurface,
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(
-                                defaultElevation = 0.dp, pressedElevation = 0.dp
-                            ),
-                        ) {
-                            val target = state.lists.firstOrNull { it.id == state.listId }
-                            Text(
-                                (if (target?.kind == ListKind.SHOPPING) "待买 · " else "待办 · ") +
-                                    (target?.name ?: "选择清单") + "  ▾",
-                                Modifier.weight(1f)
+                // 4. Dot-Grid Stationery Pad (notepad-sheet)
+                val padShape = RoundedCornerShape(14.dp)
+                val dotColor = palette.lineStrong.copy(alpha = if (palette.isDark) 0.42f else 0.55f)
+                val primaryBarColor = palette.primary
+                val inputEnabled = state.loaded && !state.busy && !state.itemMissing
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(padShape)
+                        .background(palette.surfaceWarm)
+                        .border(1.dp, palette.lineStrong, padShape)
+                        .drawBehind {
+                            val step = 16.dp.toPx()
+                            val dotRadius = 0.9.dp.toPx()
+                            var x = step / 2f
+                            while (x < size.width) {
+                                var y = step / 2f
+                                while (y < size.height) {
+                                    drawCircle(
+                                        color = dotColor,
+                                        radius = dotRadius,
+                                        center = Offset(x, y)
+                                    )
+                                    y += step
+                                }
+                                x += step
+                            }
+                            drawRect(
+                                color = primaryBarColor,
+                                topLeft = Offset(0f, 0f),
+                                size = Size(3.dp.toPx(), size.height)
                             )
                         }
-                        DropdownMenu(expanded = listMenu, onDismissRequest = { listMenu = false }) {
+                        .padding(start = 15.dp, end = 14.dp, top = 12.dp, bottom = 10.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val titlePlaceholder = if (state.batch) "每行一条，最多 50 条…" else "准备做什么？"
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = if (state.batch) 84.dp else 44.dp)
+                        ) {
+                            if (state.title.isEmpty()) {
+                                Text(
+                                    text = titlePlaceholder,
+                                    fontFamily = EditorialSerif,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = palette.faint
+                                )
+                            }
+                            BasicTextField(
+                                value = state.title,
+                                onValueChange = vm::setTitle,
+                                enabled = inputEnabled,
+                                singleLine = !state.batch,
+                                maxLines = if (state.batch) 10 else 3,
+                                textStyle = TextStyle(
+                                    fontFamily = EditorialSerif,
+                                    fontSize = 18.sp,
+                                    lineHeight = 25.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = palette.text
+                                ),
+                                cursorBrush = SolidColor(palette.primary),
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = if (state.batch) ImeAction.Default else ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        if (!state.batch && state.canSave) {
+                                            vm.save(continueAfter = false)
+                                        }
+                                    }
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                                    .semantics {
+                                        contentDescription = if (state.batch) "每行一条" else "要记的内容"
+                                    }
+                            )
+                        }
+
+                        DashedHorizontalDivider(color = palette.lineStrong)
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp)
+                        ) {
+                            if (state.note.isEmpty()) {
+                                Text(
+                                    text = "附注或细节（可选）…",
+                                    fontSize = 13.sp,
+                                    color = palette.faint
+                                )
+                            }
+                            BasicTextField(
+                                value = state.note,
+                                onValueChange = vm::setNote,
+                                enabled = inputEnabled,
+                                maxLines = 4,
+                                textStyle = TextStyle(
+                                    fontSize = 13.sp,
+                                    lineHeight = 20.sp,
+                                    color = palette.muted
+                                ),
+                                cursorBrush = SolidColor(palette.primary),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 16.dp)
+                                    .semantics { contentDescription = "备注（可选）" }
+                            )
+                            Text(
+                                text = "${state.title.length + state.note.length} / 200",
+                                fontFamily = EditorialMono,
+                                fontSize = 10.sp,
+                                color = palette.faint,
+                                modifier = Modifier.align(Alignment.BottomEnd)
+                            )
+                        }
+                    }
+                }
+
+                // Batch Preview Count / Info / Error
+                val lineCount = remember(state.title) {
+                    state.title.lines().count { it.trim().isNotEmpty() }
+                }
+                if (state.batch && lineCount > 0) {
+                    Text(
+                        text = "将生成 $lineCount 条",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = palette.primary
+                    )
+                }
+                state.info?.let {
+                    Text(
+                        text = it,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = palette.primary,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                    )
+                }
+                state.error?.let {
+                    Text(
+                        text = it,
+                        color = palette.danger,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                    )
+                }
+
+                // 5. Compact Meta Pills Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Pill 1: List Selector Dropdown
+                    Box {
+                        MetaPill(
+                            text = "📒 ${currentList.name} ▾",
+                            active = false,
+                            enabled = inputEnabled,
+                            contentDesc = "所属清单 ${currentList.name}",
+                            onClick = { listMenu = true }
+                        )
+                        DropdownMenu(
+                            expanded = listMenu,
+                            onDismissRequest = { listMenu = false }
+                        ) {
                             state.lists.forEach { list ->
                                 DropdownMenuItem(
-                                    text = {
-                                        Text((if (list.kind == ListKind.SHOPPING) "待买 · " else "待办 · ") + list.name)
-                                    },
+                                    text = { Text(list.name) },
                                     onClick = {
                                         listMenu = false
                                         vm.setListId(list.id)
-                                    })
+                                    }
+                                )
                             }
                         }
                     }
 
-                    if (state.targetKind == ListKind.SHOPPING && !state.batch) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedTextField(
-                                value = state.quantity,
-                                onValueChange = vm::setQuantity,
-                                label = { Text("数量（可选）") },
-                                singleLine = true,
-                                enabled = !state.busy && !state.itemMissing,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                colors = warmFieldColors(),
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = state.unit,
-                                onValueChange = vm::setUnit,
-                                label = { Text("单位") },
-                                singleLine = true,
-                                enabled = !state.busy && !state.itemMissing,
-                                colors = warmFieldColors(),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = state.note,
-                        onValueChange = vm::setNote,
-                        label = { Text("备注（可选）") },
-                        enabled = !state.busy && !state.itemMissing,
-                        minLines = 2,
-                        maxLines = 5,
-                        colors = warmFieldColors(),
-                        modifier = Modifier.fillMaxWidth()
+                    // Pill 2: Pin Toggle Pill
+                    MetaPill(
+                        text = if (state.pinned) "★ 已置顶" else "★ 置顶印记",
+                        active = state.pinned,
+                        enabled = inputEnabled,
+                        contentDesc = "置顶，让它先被看见",
+                        onClick = { vm.setPinned(!state.pinned) }
                     )
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(
-                            enabled = !state.busy && !state.itemMissing
-                        ) { vm.setPinned(!state.pinned) },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = state.pinned,
-                            onCheckedChange = if (state.busy || state.itemMissing) null
-                            else { checked -> vm.setPinned(checked) }
-                        )
-                        Text("置顶，让它先被看见")
-                    }
 
-                    state.info?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    // Pill 3: Batch Toggle Pill (Create mode only)
+                    if (state.mode == EditorMode.CREATE) {
+                        MetaPill(
+                            text = if (state.batch) "☰ 批量 ($lineCount/50条)" else "☰ 按行拆条",
+                            active = state.batch,
+                            enabled = inputEnabled,
+                            contentDesc = "每行生成一条",
+                            onClick = { vm.setBatch(!state.batch) }
+                        )
                     }
-                    if (state.mode == EditorMode.EDIT) {
-                        TextButton(
+                }
+
+                // 6. Bottom Sheet Actions
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (state.mode == EditorMode.CREATE) {
+                        Surface(
+                            onClick = { vm.save(continueAfter = true) },
+                            enabled = state.canSave,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                                .semantics { contentDescription = "保存并继续" },
+                            shape = RoundedCornerShape(13.dp),
+                            color = palette.soft,
+                            border = BorderStroke(1.dp, palette.lineStrong)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "入册并继续",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (state.canSave) palette.text else palette.faint
+                                )
+                            }
+                        }
+                    } else {
+                        Surface(
                             onClick = { deleteDialog = true },
                             enabled = state.canSave,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("删除这条记录", color = MaterialTheme.colorScheme.error) }
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                                .semantics { contentDescription = "删除这条记录" },
+                            shape = RoundedCornerShape(13.dp),
+                            color = palette.dangerSoft,
+                            border = BorderStroke(1.dp, palette.danger.copy(alpha = 0.35f))
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "撕下删除",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = palette.danger
+                                )
+                            }
+                        }
                     }
-                    Spacer(Modifier.height(12.dp))
-                }
-                Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                    Column(
-                        Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
-                            .padding(horizontal = 20.dp, vertical = 12.dp)
+
+                    Surface(
+                        onClick = { vm.save(continueAfter = false) },
+                        enabled = state.canSave,
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .height(46.dp)
+                            .shadow(
+                                elevation = if (state.canSave) 4.dp else 0.dp,
+                                shape = RoundedCornerShape(13.dp),
+                                ambientColor = palette.primary.copy(alpha = 0.4f),
+                                spotColor = palette.primary.copy(alpha = 0.4f)
+                            )
+                            .semantics {
+                                contentDescription = if (state.mode == EditorMode.EDIT) "保存修改" else "保存"
+                            },
+                        shape = RoundedCornerShape(13.dp),
+                        color = if (state.canSave) palette.primary else palette.soft
                     ) {
-                        state.error?.let {
-                            Text(it, color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 2,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                            Spacer(Modifier.height(6.dp))
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            if (state.mode == EditorMode.CREATE) {
-                                OutlinedButton(
-                                    onClick = { vm.save(continueAfter = true) },
-                                    enabled = state.canSave,
-                                    modifier = Modifier.weight(1f)
-                                ) { Text("保存并继续") }
-                            }
-                            Button(
-                                onClick = { vm.save(continueAfter = false) },
-                                enabled = state.canSave,
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.medium,
-                            ) {
-                                Text(when {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = when {
                                     state.busy -> "保存中…"
-                                    state.mode == EditorMode.EDIT -> "保存修改"
-                                    else -> "保存"
-                                })
-                            }
+                                    state.mode == EditorMode.EDIT -> "保存修订"
+                                    else -> "入册保存"
+                                },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (state.canSave) palette.onPrimary else palette.faint
+                            )
                         }
-                        Text("取消或返回会保留草稿；保存成功后才清除。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 6.dp))
                     }
                 }
+
+                // Helper Footnote
+                Text(
+                    text = "收起或返回会自动留存本地草稿；正式入册后清除。",
+                    fontSize = 11.sp,
+                    color = palette.muted,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
-    }
-
-    if (state.crossTypeConfirm) {
-        AlertDialog(
-            onDismissRequest = vm::cancelCrossTypeMove,
-            title = { Text("移到待办清单？") },
-            text = { Text("移动后将清除数量和单位，标题和备注保留。") },
-            confirmButton = {
-                TextButton(onClick = vm::confirmCrossTypeMove) { Text("移动并保存") }
-            },
-            dismissButton = {
-                TextButton(onClick = vm::cancelCrossTypeMove) { Text("取消") }
-            }
-        )
     }
 
     if (deleteDialog) {
         AlertDialog(
             onDismissRequest = { deleteDialog = false },
-            title = { Text("删除这条记录？") },
+            containerColor = palette.surface,
+            titleContentColor = palette.text,
+            textContentColor = palette.muted,
+            title = { Text("删除这条记录？", fontFamily = EditorialSerif, fontWeight = FontWeight.Bold) },
             text = { Text("删除后不再显示，暂不提供回收站；这条记录的草稿也会清除。") },
             confirmButton = {
-                TextButton(onClick = {
-                    deleteDialog = false
-                    vm.delete()
-                }) { Text("删除") }
+                TextButton(
+                    onClick = {
+                        deleteDialog = false
+                        vm.delete()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = palette.danger)
+                ) { Text("删除", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { deleteDialog = false }) { Text("取消") }
             }
+        )
+    }
+}
+
+@Composable
+private fun MetaPill(
+    text: String,
+    active: Boolean,
+    enabled: Boolean,
+    contentDesc: String,
+    onClick: () -> Unit
+) {
+    val palette = LocalEditorialPalette.current
+    val shape = RoundedCornerShape(10.dp)
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.semantics {
+            role = Role.Button
+            contentDescription = contentDesc
+        },
+        shape = shape,
+        color = if (active) palette.primarySoft else palette.soft,
+        border = BorderStroke(
+            width = if (active) 1.5.dp else 1.dp,
+            color = if (active) palette.primary else palette.lineStrong.copy(alpha = 0.65f)
+        )
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (active) palette.primary else palette.text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
         )
     }
 }
