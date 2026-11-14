@@ -126,9 +126,12 @@ jobs:
             echo "::error::apksigner not found under $SDK_ROOT/build-tools."
             exit 1
           fi
-          DIGEST="$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1)"
+          echo "Using apksigner: $APKSIGNER"
+          CERT_OUT="$("$APKSIGNER" verify --print-certs "$APK" 2>&1)"
+          echo "$CERT_OUT"
+          DIGEST="$(printf '%s\n' "$CERT_OUT" | sed -nE 's/.*SHA-256 digest:[[:space:]]*([0-9a-fA-F]{64}).*/\1/Ip' | head -n1 | tr '[:upper:]' '[:lower:]')"
           if [[ "$DIGEST" != "$EXPECTED_CERT_SHA256" ]]; then
-            echo "::error::APK signing certificate $DIGEST does not match the published releases; in-place updates would fail."
+            echo "::error::APK signing certificate '$DIGEST' does not match the published releases ($EXPECTED_CERT_SHA256); in-place updates would fail."
             exit 1
           fi
 
