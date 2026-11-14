@@ -4,6 +4,7 @@ import com.wanglemai.app.domain.UpdateCheckResult
 import com.wanglemai.app.domain.UpdateException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -50,6 +51,7 @@ class UpdateCenter(
         GitHubUpdateClient(it).check()
     }
 ) {
+    @Volatile
     private var downloadJob: Job? = null
 
     val checking = MutableStateFlow(false)
@@ -118,7 +120,8 @@ class UpdateCenter(
             else -> null
         }?.takeIf { it.file.exists() }
         download.value = ApkDownloadState.Downloading(0, 0, viaAcceleratedSource = mirrorUrl != null)
-        downloadJob = scope.launch {
+        // Assign downloadJob before starting so an instant IO completion never observes null.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             val self = coroutineContext[Job]
             fun finish(state: ApkDownloadState) {
                 // Only the still-current job may write; a cancelled run must not clobber
@@ -135,7 +138,7 @@ class UpdateCenter(
                     expectedSha256 = expectedSha256,
                     targetDir = updatesDir
                 ) { received, total, accelerated ->
-                    if (isActive) {
+                    if (isActive && downloadJob === self) {
                         download.value = ApkDownloadState.Downloading(received, total, accelerated)
                     }
                 }
@@ -153,6 +156,8 @@ class UpdateCenter(
                 fail("下载失败，请重试")
             }
         }
+        downloadJob = job
+        job.start()
     }
 
     fun cancelDownload() {
