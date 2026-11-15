@@ -65,12 +65,12 @@ class WidgetPinCoordinator(
             val token = UUID.randomUUID().toString()
             val accepted = mutex.withLock {
                 if (mutableState.value.status == WidgetPinStatus.REQUESTING) return@launch
-                // Before retrying, reconcile a late host update to avoid adding a duplicate.
-                if (mutableState.value.status == WidgetPinStatus.UNCONFIRMED &&
-                    mutableState.value.providerClass == provider.name && findNewWidgetLocked()) return@launch
-                cancelCallbackLocked()
-                preferences.edit(commit = true) { clear() }
                 try {
+                    // Before retrying, reconcile a late host update to avoid adding a duplicate.
+                    if (mutableState.value.status == WidgetPinStatus.UNCONFIRMED &&
+                        mutableState.value.providerClass == provider.name && findNewWidgetLocked()) return@launch
+                    cancelCallbackLocked()
+                    preferences.edit(commit = true) { clear() }
                     if (!manager.isRequestPinAppWidgetSupported) {
                         mutableState.value = WidgetPinState(WidgetPinStatus.UNSUPPORTED, providerClass = provider.name)
                         return@withLock false

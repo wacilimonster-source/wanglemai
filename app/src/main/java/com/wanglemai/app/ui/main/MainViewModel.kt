@@ -85,21 +85,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private suspend fun savePreferenceQuietly(key: String, value: String) {
+        try {
+            repo.setPreference(key, value)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+        }
+    }
+
     suspend fun openList(id: String) = withContext(Dispatchers.IO) {
-        val list = repo.list(id)
+        val list = try {
+            repo.list(id)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            error.value = "暂时无法读取记录，请重试"
+            return@withContext
+        }
         if (list == null) {
             error.value = "清单已不存在，已切换到默认清单"
             selected.value = DEFAULT_TODO
-            runCatching { repo.setPreference(PREF_LAST_LIST, DEFAULT_TODO) }
+            savePreferenceQuietly(PREF_LAST_LIST, DEFAULT_TODO)
             return@withContext
         }
         selectList(id)
     }
 
     suspend fun selectList(id: String) = withContext(Dispatchers.IO) {
-        val list = repo.list(id) ?: return@withContext
+        val list = try {
+            repo.list(id)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            error.value = "暂时无法读取记录，请重试"
+            return@withContext
+        } ?: return@withContext
         selected.value = list.id
-        repo.setPreference(PREF_LAST_LIST, list.id)
+        savePreferenceQuietly(PREF_LAST_LIST, list.id)
         search.value = ""
         completed.value = false
         error.value = null
@@ -117,7 +140,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setTheme(mode: ThemeMode) {
         theme.value = mode
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { repo.setPreference(PREF_THEME, mode.name) }
+            savePreferenceQuietly(PREF_THEME, mode.name)
         }
     }
 
@@ -154,7 +177,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val result = container.mutate { repo.deleteListAndMoveToDefault(list.id, list.version) }
         if (result is MutationResult.Success && selected.value == list.id) {
             selected.value = DEFAULT_TODO
-            repo.setPreference(PREF_LAST_LIST, DEFAULT_TODO)
+            savePreferenceQuietly(PREF_LAST_LIST, DEFAULT_TODO)
         }
         result
     }

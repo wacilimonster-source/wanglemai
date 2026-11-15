@@ -16,7 +16,10 @@ data class UpdateCheckResult(
     val viaAcceleratedSource: Boolean = false
 )
 
-class UpdateException(override val message: String) : Exception(message)
+class UpdateException(
+    override val message: String,
+    val isIntegrityError: Boolean = false
+) : Exception(message)
 
 /**
  * Reads the latest public GitHub Release for this repository. No token or account is used.

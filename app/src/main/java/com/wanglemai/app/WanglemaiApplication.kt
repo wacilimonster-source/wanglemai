@@ -3,6 +3,7 @@ package com.wanglemai.app
 import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
+import android.util.Log
 import androidx.room.Room
 import com.wanglemai.app.data.RoomBackupRepository
 import com.wanglemai.app.data.RoomItemRepository
@@ -16,14 +17,25 @@ import kotlinx.coroutines.*
 import java.io.File
 
 class WanglemaiApplication : Application() {
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val exceptionHandler = CoroutineExceptionHandler { _, error ->
+        Log.e("WanglemaiApp", "Uncaught application coroutine failure", error)
+    }
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + exceptionHandler)
     val container by lazy { AppContainer(this) }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         // Widgets use explicit color resources; SYSTEM-themed instances must repaint when
         // the host changes night mode or font scale while this process is alive.
-        scope.launch { runCatching { container.widgets.refreshAll() } }
+        scope.launch {
+            try {
+                container.widgets.refreshAll()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("WanglemaiApp", "Failed to refresh widgets on config change", e)
+            }
+        }
     }
 }
 class AppContainer(context: Context) {
@@ -41,7 +53,15 @@ class AppContainer(context: Context) {
     )
     suspend fun mutate(block: suspend () -> MutationResult): MutationResult {
         val result = block()
-        if (result is MutationResult.Success) runCatching { widgets.refreshAll() }
+        if (result is MutationResult.Success) {
+            try {
+                widgets.refreshAll()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("WanglemaiApp", "Widget refresh failed after mutation", e)
+            }
+        }
         return result // A host refresh error must never turn a committed save into a duplicate retry.
     }
 }

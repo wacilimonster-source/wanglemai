@@ -43,6 +43,21 @@ class WidgetPinTest {
         node.click()
     }
 
+    private fun tapAny(vararg texts: String) {
+        val deadline = System.currentTimeMillis() + 8_000
+        while (System.currentTimeMillis() < deadline) {
+            for (text in texts) {
+                val node = device.findObject(By.text(text)) ?: device.findObject(By.desc(text))
+                if (node != null) {
+                    node.click()
+                    return
+                }
+            }
+            Thread.sleep(100)
+        }
+        error("Missing ${texts.joinToString(" / ")}")
+    }
+
     @Test fun inAppRequestConfirmsAdditionAndOpensConfiguration(): Unit = runBlocking {
         container.pinning.dismiss()
         await { container.pinning.state.value.status == WidgetPinStatus.IDLE }
@@ -60,7 +75,7 @@ class WidgetPinTest {
             await { container.pinning.state.value.status == WidgetPinStatus.UNCONFIRMED }
             tap("添加标准清单")
             if (device.hasObject(By.text("已开启，继续添加"))) tap("已开启，继续添加")
-            tap("Add to home screen")
+            tapAny("Add to home screen", "添加到主屏幕")
             await { container.pinning.state.value.status == WidgetPinStatus.ADDED }
             val id = container.pinning.state.value.widgetId!!
             assertNotNull(AppWidgetManager.getInstance(context).getAppWidgetInfo(id))
@@ -148,7 +163,9 @@ class WidgetPinTest {
             tap("设置")
             tap("添加无响应？")
             tap("打开权限设置")
-            assertNotNull(device.wait(Until.findObject(By.pkg("com.android.settings").text("App info")), 10_000))
+            assertNotNull(device.wait(Until.findObject(
+                By.pkg("com.android.settings").text(java.util.regex.Pattern.compile("App info|应用信息"))
+            ), 10_000))
             device.waitForIdle()
             device.pressBack()
             tap("知道了")

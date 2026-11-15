@@ -105,8 +105,8 @@ fun SettingsScreen(
                     pendingImport = payload
                 } catch (e: BackupException) {
                     backupError = e.message
-                } catch (e: IOException) {
-                    backupError = if (e.message == "TOO_LARGE") "备份文件超过 5MB" else "读取文件失败"
+                } catch (_: IOException) {
+                    backupError = "读取文件失败"
                 } catch (_: Exception) {
                     backupError = "导入失败，请重试"
                 } finally {
@@ -704,13 +704,14 @@ private suspend fun readBoundedText(context: Context, uri: Uri, maxBytes: Int): 
                 if (total > maxBytes) throw BackupException("备份文件超过 5MB")
                 output.write(buffer, 0, read)
             }
-            String(output.toByteArray(), Charsets.UTF_8)
+            String(output.toByteArray(), Charsets.UTF_8).removePrefix("\uFEFF")
         }
     }
 
 private suspend fun writeText(context: Context, uri: Uri, text: String) =
     withContext(Dispatchers.IO) {
-        val output = context.contentResolver.openOutputStream(uri)
+        val output = (runCatching { context.contentResolver.openOutputStream(uri, "wt") }.getOrNull()
+            ?: context.contentResolver.openOutputStream(uri))
             ?: throw IOException("无法写入文件")
         output.use { it.write(text.toByteArray(Charsets.UTF_8)) }
     }

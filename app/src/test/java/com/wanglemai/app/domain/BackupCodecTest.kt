@@ -206,4 +206,10 @@ class BackupCodecTest {
         }
         assertThrows(BackupException::class.java) { BackupCodec.decode(root.toString()) }
     }
+
+    @Test fun utf8BomPrefixIsStrippedBeforeDecoding() {
+        val decoded = BackupCodec.decode("\uFEFF" + BackupCodec.encode(document()))
+        assertEquals(2, decoded.lists.size)
+        assertEquals("取快递", decoded.items.single().title)
+    }
 }

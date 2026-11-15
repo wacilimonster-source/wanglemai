@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import java.util.UUID
 
+private const val COMMAND_RETENTION_MS = 7L * 24 * 60 * 60 * 1000
+
 class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
     private val dao = db.dao()
 
@@ -68,20 +70,21 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
     override suspend fun create(input: ItemInput, commandId: String) = mutate {
         requireCommandId(commandId)
         replayCommand(commandId)?.let { return@mutate it }
-        val list = dao.list(input.listId) ?: return@mutate MutationResult.NotFound
+        dao.list(input.listId) ?: return@mutate MutationResult.NotFound
         val normalized = Validation.normalize(input)
         val id = UUID.randomUUID().toString()
         val time = System.currentTimeMillis()
         dao.insertItem(ItemEntity(id, normalized.listId, normalized.title, normalized.note, false,
             normalized.pinned, nextSortKey(normalized.listId), time, time))
         dao.insertCommand(AppliedCommand(commandId, JSONArray(listOf(id)).toString(), time))
+        dao.pruneCommands(time - COMMAND_RETENTION_MS)
         MutationResult.Success(listOf(id))
     }
 
     override suspend fun createBatch(input: BatchInput, commandId: String) = mutate {
         requireCommandId(commandId)
         replayCommand(commandId)?.let { return@mutate it }
-        val list = dao.list(input.listId) ?: return@mutate MutationResult.NotFound
+        dao.list(input.listId) ?: return@mutate MutationResult.NotFound
         val normalized = Validation.normalizeBatch(input)
         val time = System.currentTimeMillis()
         var sortKey = dao.maxSortKey(input.listId)
@@ -94,16 +97,18 @@ class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
         dao.insertItems(entities)
         val ids = entities.map { it.id }
         dao.insertCommand(AppliedCommand(commandId, JSONArray(ids).toString(), time))
+        dao.pruneCommands(time - COMMAND_RETENTION_MS)
         MutationResult.Success(ids)
     }
 
     override suspend fun update(id: String, expectedVersion: Long, input: ItemInput) = mutate {
         val old = dao.item(id) ?: return@mutate MutationResult.NotFound
         if (old.version != expectedVersion) return@mutate MutationResult.Conflict
-        val list = dao.list(input.listId) ?: return@mutate MutationResult.NotFound
+        dao.list(input.listId) ?: return@mutate MutationResult.NotFound
         val normalized = Validation.normalize(input)
+        val sortKey = if (normalized.listId != old.listId) nextSortKey(normalized.listId) else old.sortKey
         if (dao.edit(id, expectedVersion, normalized.listId, normalized.title, normalized.note,
-                normalized.pinned, System.currentTimeMillis()) == 0) {
+                normalized.pinned, sortKey, System.currentTimeMillis()) == 0) {
             return@mutate MutationResult.Conflict
         }
         dao.clearItemUndo(id)

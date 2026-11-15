@@ -53,7 +53,8 @@ object BackupCodec {
         throw BackupException("备份生成失败")
     }
 
-    fun decode(json: String): BackupDocument {
+    fun decode(rawJson: String): BackupDocument {
+        val json = rawJson.removePrefix("\uFEFF")
         if (json.toByteArray(Charsets.UTF_8).size > BACKUP_MAX_BYTES) {
             throw BackupException("备份文件超过 5MB")
         }

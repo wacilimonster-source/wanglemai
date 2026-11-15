@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.os.Bundle
 import com.wanglemai.app.app
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 open class BaseListProvider : AppWidgetProvider() {
@@ -47,6 +48,10 @@ open class BaseListProvider : AppWidgetProvider() {
         context.app.scope.launch {
             try {
                 context.app.container.widgets.restore(oldIds, newIds)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Best-effort restore; provider callback must finish even if widget host failed.
             } finally {
                 pending.finish()
             }

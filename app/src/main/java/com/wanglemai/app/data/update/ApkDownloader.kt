@@ -17,6 +17,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 data class DownloadedApk(
     val file: File,
@@ -56,6 +57,7 @@ class ApkDownloader(
         }
         if (sources.isEmpty()) throw UpdateException("没有可用的下载地址")
         var lastError: UpdateException? = null
+        var integrityError: UpdateException? = null
         for ((url, accelerated) in sources) {
             try {
                 return@withContext downloadFrom(url, expectedSha256, targetDir, onProgress, accelerated)
@@ -64,10 +66,11 @@ class ApkDownloader(
                 // directory and race with the newer download that replaced it.
                 currentCoroutineContext().ensureActive()
                 lastError = e
+                if (e.isIntegrityError) integrityError = e
             }
         }
-        val last = lastError ?: UpdateException("下载失败，请稍后重试")
-        throw if (sources.size > 1 && !last.message.contains("校验失败")) {
+        val last = integrityError ?: lastError ?: UpdateException("下载失败，请稍后重试")
+        throw if (sources.size > 1 && !last.isIntegrityError) {
             UpdateException("加速源与 GitHub 均下载失败，请检查网络后重试")
         } else {
             last
@@ -85,17 +88,23 @@ class ApkDownloader(
         val fileName = url.substringBefore('?').substringAfterLast('/')
         if (!UpdateChecker.isTrustedApkAssetName(fileName)) throw UpdateException("下载文件名无效")
         targetDir.mkdirs()
+        cleanupStaleParts(targetDir)
         val target = File(targetDir, fileName)
         // Write beside the verified package, not over it: a cancelled or failed download must
         // leave the previously verified APK (and its install entry) intact.
         val temp = File(targetDir, "$fileName.${UUID.randomUUID()}.part")
+        val tempKey = runCatching { temp.canonicalPath }.getOrElse { temp.absolutePath }
+        activePartFiles.add(tempKey)
         val response = try {
             streamOpener(url)
         } catch (e: CancellationException) {
+            activePartFiles.remove(tempKey)
             throw e
         } catch (e: UpdateException) {
+            activePartFiles.remove(tempKey)
             throw e
         } catch (_: Exception) {
+            activePartFiles.remove(tempKey)
             throw UpdateException("下载连接失败，请检查网络后重试")
         }
         try {
@@ -123,7 +132,7 @@ class ApkDownloader(
             if (total > 0 && received != total) throw UpdateException("下载不完整，请重试")
             val actual = digest.digest().joinToString("") { "%02x".format(it) }
             if (expectedSha256 != null && !actual.equals(expectedSha256, ignoreCase = true)) {
-                throw UpdateException("安装包校验失败，已删除")
+                throw UpdateException("安装包校验失败，已删除", isIntegrityError = true)
             }
             replaceVerified(target, temp)
             // Older versions are only removed after the new package is verified and in place.
@@ -144,6 +153,7 @@ class ApkDownloader(
             temp.delete()
             throw UpdateException("下载失败，请重试")
         } finally {
+            activePartFiles.remove(tempKey)
             response.disconnect()
         }
     }
@@ -163,6 +173,20 @@ class ApkDownloader(
         if (received == total) return true
         if (total <= 0) return received - lastReported >= 256L * 1024
         return received - lastReported >= maxOf(total / 100, 64L * 1024)
+    }
+
+    companion object {
+        private val activePartFiles = ConcurrentHashMap.newKeySet<String>()
+
+        /** Removes orphaned `.part` files left behind when an earlier download process exited mid-stream. */
+        fun cleanupStaleParts(targetDir: File) {
+            targetDir.listFiles()?.forEach { file ->
+                if (file.isFile && file.name.endsWith(".part")) {
+                    val key = runCatching { file.canonicalPath }.getOrElse { file.absolutePath }
+                    if (key !in activePartFiles) file.delete()
+                }
+            }
+        }
     }
 }
 

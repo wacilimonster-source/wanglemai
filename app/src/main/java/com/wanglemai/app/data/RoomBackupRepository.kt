@@ -112,34 +112,41 @@ class RoomBackupRepository(private val db: AppDatabase) : BackupRepository {
         }
 
         val localItemIds = dao.allItemIds().toHashSet()
-        document.items.forEach { item ->
-            if (!localItemIds.add(item.id)) {
-                skipped++
-                return@forEach
+        val nextSortKeyByList = HashMap<String, Long>()
+        document.items
+            .sortedWith(compareBy({ it.sortKey }, { it.createdAt }, { it.id }))
+            .forEach { item ->
+                if (!localItemIds.add(item.id)) {
+                    skipped++
+                    return@forEach
+                }
+                val listId = effectiveListId(item, legacyShopping)
+                val list = dao.list(listId) ?: throw BackupException("记录引用的清单不存在")
+                val normalized = try {
+                    Validation.normalize(ItemInput(listId, item.title, item.note, item.pinned))
+                } catch (e: ValidationException) {
+                    throw BackupException("记录字段无效：${e.message}")
+                }
+                val prev = nextSortKeyByList[list.id] ?: dao.maxSortKey(list.id)
+                if (prev > Long.MAX_VALUE - 1024) throw BackupException("清单排序已满，请新建清单")
+                val sortKey = prev + 1024
+                nextSortKeyByList[list.id] = sortKey
+                dao.insertItem(ItemEntity(
+                    id = item.id,
+                    listId = list.id,
+                    title = normalized.title,
+                    note = normalized.note,
+                    completed = item.completed,
+                    pinned = item.pinned,
+                    sortKey = sortKey,
+                    createdAt = item.createdAt,
+                    updatedAt = item.updatedAt,
+                    completedAt = item.completedAt,
+                    deletedAt = null,
+                    version = 1
+                ))
+                addedItems++
             }
-            val listId = effectiveListId(item, legacyShopping)
-            val list = dao.list(listId) ?: throw BackupException("记录引用的清单不存在")
-            val normalized = try {
-                Validation.normalize(ItemInput(listId, item.title, item.note, item.pinned))
-            } catch (e: ValidationException) {
-                throw BackupException("记录字段无效：${e.message}")
-            }
-            dao.insertItem(ItemEntity(
-                id = item.id,
-                listId = list.id,
-                title = normalized.title,
-                note = normalized.note,
-                completed = item.completed,
-                pinned = item.pinned,
-                sortKey = item.sortKey,
-                createdAt = item.createdAt,
-                updatedAt = item.updatedAt,
-                completedAt = item.completedAt,
-                deletedAt = null,
-                version = 1
-            ))
-            addedItems++
-        }
         BackupMergeReport(addedLists, addedItems, skipped)
     }
 

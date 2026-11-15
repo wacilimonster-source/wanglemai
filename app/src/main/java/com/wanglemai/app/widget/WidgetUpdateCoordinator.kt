@@ -57,17 +57,19 @@ class WidgetUpdateCoordinator(
     }
 
     suspend fun restore(oldIds: IntArray, newIds: IntArray) {
-        val dao = db.dao()
-        db.withTransaction {
-            oldIds.zip(newIds).forEach { (oldId, newId) ->
-                dao.config(oldId)?.let { config ->
-                    dao.clearWidgetUndo(newId)
-                    dao.saveConfig(config.copy(appWidgetId = newId, updatedAt = System.currentTimeMillis()))
+        mutex.withLock {
+            val dao = db.dao()
+            db.withTransaction {
+                oldIds.zip(newIds).forEach { (oldId, newId) ->
+                    dao.config(oldId)?.let { config ->
+                        dao.clearWidgetUndo(newId)
+                        dao.saveConfig(config.copy(appWidgetId = newId, updatedAt = System.currentTimeMillis()))
+                    }
+                    dao.deleteConfig(oldId)
                 }
-                dao.deleteConfig(oldId)
             }
+            oldIds.forEach { transientMessages.remove(it) }
         }
-        oldIds.forEach { transientMessages.remove(it) }
         newIds.forEach { runCatching { refresh(it) } }
     }
 

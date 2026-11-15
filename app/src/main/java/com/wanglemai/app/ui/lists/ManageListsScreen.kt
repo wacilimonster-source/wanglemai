@@ -61,15 +61,15 @@ fun ManageListsScreen(
     val totalAll = remember(counts) { counts.values.sum() }
     val totalArchived = (totalAll - totalActive).coerceAtLeast(0)
 
-    LaunchedEffect(renamingId, lists) {
-        if (renamingId != null && renaming == null) {
+    LaunchedEffect(renamingId, lists, submitting) {
+        if (!submitting && renamingId != null && renaming == null) {
             renamingId = null
             error = null
             onMessage(MutationResult.NotFound.message())
         }
     }
-    LaunchedEffect(deletingId, lists) {
-        if (deletingId != null && deleting == null) {
+    LaunchedEffect(deletingId, lists, submitting) {
+        if (!submitting && deletingId != null && deleting == null) {
             deletingId = null
             onMessage(MutationResult.NotFound.message())
         }

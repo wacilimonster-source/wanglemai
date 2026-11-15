@@ -61,6 +61,18 @@ class FrameworkUiTest {
         }
         throw stale ?: IllegalStateException("Cannot tap UI text: $text")
     }
+    private fun scrollAndTap(text: String) {
+        val direct = device.findObject(By.text(text)) ?: device.findObject(By.desc(text))
+        if (direct != null) {
+            direct.click()
+            return
+        }
+        val scrollable = UiScrollable(UiSelector().scrollable(true))
+        if (scrollable.exists()) {
+            runCatching { scrollable.scrollIntoView(UiSelector().text(text)) }
+        }
+        tap(text)
+    }
     private fun awaitCondition(block: () -> Boolean) {
         val deadline = System.currentTimeMillis() + 10_000
         while (System.currentTimeMillis() < deadline) { if (block()) return; Thread.sleep(100) }
@@ -531,9 +543,9 @@ class FrameworkUiTest {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             find("这张卡片，记什么？")
             tap(largeName)
-            tap("浅色")
-            tap("舒适")
-            tap("保存并添加")
+            scrollAndTap("浅色")
+            scrollAndTap("舒适")
+            scrollAndTap("保存并添加")
             awaitRepo {
                 val config = container.db.dao().config(smallId)
                 config?.listId == largeList && config.theme == ThemeMode.LIGHT.name &&
@@ -600,8 +612,8 @@ class FrameworkUiTest {
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 find("这张卡片，记什么？")
                 if (exit == "save") {
-                    tap("超紧凑")
-                    tap("保存并添加")
+                    scrollAndTap("超紧凑")
+                    scrollAndTap("保存并添加")
                     awaitRepo { container.db.dao().config(widgetId)?.density == WidgetDensity.ULTRA_COMPACT.name }
                 } else if (exit == "cancel") {
                     tap("取消")
@@ -707,6 +719,68 @@ class FrameworkUiTest {
             deleteAllItems(listId)
             container.repository.list(listId)?.let {
                 container.repository.deleteListAndMoveToDefault(it.id, it.version)
+            }
+        }
+        Unit
+    }
+
+    @Test fun recreatingAfterListSwitchDoesNotRevertInitialIntentList() = runBlocking {
+        resetSelection()
+        val stamp = System.currentTimeMillis() % 1_000_000
+        val targetName = "切换保留$stamp"
+        val targetListId = (container.repository.createList(targetName)
+            as MutationResult.Success).itemIds.single()
+        val scenario = ActivityScenario.launch<MainActivity>(
+            Intent(context, MainActivity::class.java).putExtra("list_id", DEFAULT_TODO)
+        )
+        try {
+            find("＋ 记一条")
+            tap(targetName)
+            awaitRepo { container.repository.getPreference(PREF_LAST_LIST) == targetListId }
+            scenario.recreate()
+            find("＋ 记一条")
+            awaitCondition {
+                var selectedId: String? = null
+                scenario.onActivity {
+                    selectedId = androidx.lifecycle.ViewModelProvider(it)[com.wanglemai.app.ui.main.MainViewModel::class.java]
+                        .listId.value
+                }
+                selectedId == targetListId
+            }
+        } finally {
+            scenario.close()
+            container.repository.setPreference(PREF_LAST_LIST, DEFAULT_TODO)
+            container.repository.list(targetListId)?.let {
+                container.repository.deleteListAndMoveToDefault(it.id, it.version)
+            }
+        }
+        Unit
+    }
+
+    @Test fun uncompletingItemShowsRestoredMessageAndSupportsUndo() = runBlocking {
+        resetSelection()
+        val stamp = System.currentTimeMillis() % 1_000_000
+        val title = "恢复测试$stamp"
+        val created = container.repository.create(ItemInput(DEFAULT_TODO, title),
+            UUID.randomUUID().toString()) as MutationResult.Success
+        val itemId = created.itemIds.single()
+        val initial = container.repository.getItem(itemId)!!
+        container.repository.setCompleted(initial.id, initial.version, true)
+        val scenario = ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java))
+        try {
+            val completedTab = device.wait(Until.findObject(By.descStartsWith("已完成 ")), 8_000)
+                ?: error("Cannot find completed tab")
+            completedTab.click()
+            find(title)
+            tap("标为未完成")
+            find("已恢复为待办")
+            awaitRepo { !container.repository.getItem(itemId)!!.completed }
+            tap("撤销")
+            awaitRepo { container.repository.getItem(itemId)!!.completed }
+        } finally {
+            scenario.close()
+            container.repository.getItem(itemId)?.let {
+                container.repository.delete(it.id, it.version)
             }
         }
         Unit

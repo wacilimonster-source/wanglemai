@@ -402,4 +402,57 @@ class RepositoryTest {
         assertEquals(listsBefore, db.dao().lists().size)
         assertEquals(itemsBefore, db.dao().allItemIds().size)
     }
+
+    @Test fun staleAppliedCommandsArePrunedWhileRecentOnesStay() = runBlocking {
+        val now = System.currentTimeMillis()
+        val staleId = UUID.randomUUID().toString()
+        val freshId = UUID.randomUUID().toString()
+        db.dao().insertCommand(AppliedCommand(staleId, """["legacy"]""", now - 8L * 24 * 60 * 60 * 1000))
+        db.dao().insertCommand(AppliedCommand(freshId, """["recent"]""", now - 60_000L))
+        repo.create(ItemInput(DEFAULT_TODO, "触发清理"), UUID.randomUUID().toString())
+        assertNull(db.dao().command(staleId))
+        assertEquals(listOf("recent"), (repo.create(ItemInput(DEFAULT_TODO, "重放"), freshId) as MutationResult.Success).itemIds)
+    }
+
+    @Test fun movingItemAcrossListsAppendsToEndOfTargetList() = runBlocking {
+        val targetList = newList("目标清单")
+        val first = createIn(targetList, "目标一")
+        val second = createIn(targetList, "目标二")
+        val movedSource = create("待移动")
+        val result = repo.update(movedSource.id, movedSource.version, ItemInput(targetList, movedSource.title))
+        assertTrue(result is MutationResult.Success)
+        val moved = repo.getItem(movedSource.id)!!
+        assertEquals(targetList, moved.listId)
+        assertTrue(moved.sortKey > second.sortKey)
+        assertEquals(listOf(first.id, second.id, moved.id), repo.observeItems(targetList, false, "").first().map { it.id })
+    }
+
+    @Test fun mergeAppendsImportedItemsIntoExistingAndLegacyShoppingLists() = runBlocking {
+        val localTodo = create("本地待办")
+        val existingId = newList("常用")
+        val localExisting = createIn(existingId, "本地常用")
+        val existingList = db.dao().list(existingId)!!
+        val now = System.currentTimeMillis()
+        val document = BackupDocument(
+            schemaVersion = BACKUP_SCHEMA_VERSION,
+            app = BACKUP_APP_ID,
+            exportedAt = now,
+            lists = listOf(
+                BackupList(DEFAULT_TODO, "TODO", "随手待办", true, now, now),
+                BackupList(existingId, "TODO", existingList.name, false, existingList.createdAt, existingList.updatedAt),
+                BackupList("legacy-shop", "SHOPPING", "超市采买", false, now, now)
+            ),
+            items = listOf(
+                BackupItem("imp-shop", "legacy-shop", "买牛奶", "", false, false, 1L, now, now, null),
+                BackupItem("imp-exist", existingId, "导入常用", "", false, false, 1L, now, now, null)
+            )
+        )
+        RoomBackupRepository(db).merge(document)
+        val todoItems = repo.observeItems(DEFAULT_TODO, false, "").first()
+        val existingItems = repo.observeItems(existingId, false, "").first()
+        assertEquals(listOf(localTodo.id, "imp-shop"), todoItems.map { it.id })
+        assertTrue(repo.getItem("imp-shop")!!.sortKey > localTodo.sortKey)
+        assertEquals(listOf(localExisting.id, "imp-exist"), existingItems.map { it.id })
+        assertTrue(repo.getItem("imp-exist")!!.sortKey > localExisting.sortKey)
+    }
 }

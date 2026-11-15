@@ -50,6 +50,7 @@ import com.wanglemai.app.ui.editor.QuickEntryActivity
 import com.wanglemai.app.ui.lists.ManageListsScreen
 import com.wanglemai.app.ui.settings.SettingsScreen
 import com.wanglemai.app.ui.theme.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.TextStyle as JavaTextStyle
@@ -61,7 +62,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        handleIntent(intent)
+        if (savedInstanceState == null) handleIntent(intent)
         setContent {
             val theme by vm.theme.collectAsStateWithLifecycle()
             WanglemaiTheme(theme) {
@@ -86,6 +87,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val id = intent?.getStringExtra("list_id") ?: return
+        intent.removeExtra("list_id")
         lifecycleScope.launch { vm.openList(id) }
     }
 }
@@ -195,11 +197,20 @@ private fun MainScreen(
                                     is MutationResult.Success -> {
                                         val undo = result.undo
                                         if (undo != null) {
-                                            val action = snackbar.showSnackbar(
-                                                message = "已归档",
-                                                actionLabel = "撤销",
-                                                duration = SnackbarDuration.Short
-                                            )
+                                            val message = if (item.completed) "已恢复为待办" else "已归档"
+                                            val dismissJob = scope.launch {
+                                                delay(5_000)
+                                                snackbar.currentSnackbarData?.dismiss()
+                                            }
+                                            val action = try {
+                                                snackbar.showSnackbar(
+                                                    message = message,
+                                                    actionLabel = "撤销",
+                                                    duration = SnackbarDuration.Indefinite
+                                                )
+                                            } finally {
+                                                dismissJob.cancel()
+                                            }
                                             if (action == SnackbarResult.ActionPerformed) {
                                                 val undoResult = vm.undo(undo)
                                                 if (undoResult !is MutationResult.Success) {

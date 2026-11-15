@@ -1,9 +1,11 @@
 package com.wanglemai.app.data.update
 
+import com.wanglemai.app.domain.UpdateCheckResult
 import com.wanglemai.app.domain.UpdateChecker
 import com.wanglemai.app.domain.UpdateException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -274,5 +276,52 @@ class UpdateCenterTest {
         assertNull(center.checkError.value)
         assertFalse(center.checking.value)
         assertEquals(ApkDownloadState.Idle, center.download.value)
+    }
+
+    @Test
+    fun initRemovesOrphanPartFiles() = runBlocking {
+        val part = tmp.newFile("wanglemai-0.3.0-debug.apk.stale.part")
+        val note = tmp.newFile("keep.txt")
+        UpdateCenter(
+            scope = CoroutineScope(Dispatchers.IO),
+            updatesDir = tmp.root,
+            downloader = ApkDownloader(streamOpener = { FakeStream(ByteArray(1)) })
+        )
+        withTimeout(5_000) {
+            while (part.exists()) delay(10)
+        }
+        assertFalse(part.exists())
+        assertTrue(note.exists())
+    }
+
+    @Test
+    fun concurrentCheckKeepsLatestResultWhenOlderCheckFinishesLate() = runBlocking {
+        val started = CountDownLatch(1)
+        val releaseSlow = CompletableFuture<Unit>()
+        val calls = AtomicInteger(0)
+        val center = UpdateCenter(
+            scope = CoroutineScope(Dispatchers.IO),
+            updatesDir = tmp.root,
+            downloader = ApkDownloader(streamOpener = { FakeStream(ByteArray(1)) }),
+            checkLatest = { current ->
+                if (calls.incrementAndGet() == 1) {
+                    started.countDown()
+                    releaseSlow.get()
+                    UpdateCheckResult(current, "0.2.0", "v0.2.0", "https://example.com/0.2.0", null, null, true)
+                } else {
+                    UpdateCheckResult(current, "0.3.0", "v0.3.0", "https://example.com/0.3.0", null, null, true)
+                }
+            }
+        )
+        center.check("0.1.0")
+        assertTrue(started.await(2, TimeUnit.SECONDS))
+        center.check("0.1.0")
+        withTimeout(5_000) {
+            center.result.first { it?.latestVersion == "0.3.0" }
+            center.checking.first { !it }
+        }
+        releaseSlow.complete(Unit)
+        assertEquals("0.3.0", center.result.value?.latestVersion)
+        assertFalse(center.checking.value)
     }
 }

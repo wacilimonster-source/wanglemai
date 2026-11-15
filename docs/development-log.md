@@ -1,5 +1,14 @@
 # Android 开发与交接记录
 
+## v0.4.1 · 代码评审修复与稳定性增强 / 2026-11-15
+
+针对 `v0.4.0` 全量源码开展系统代码评审，记录 `CR-01` ~ `CR-16` 问题清单（[code-review-2026-11-15.md](code-review-2026-11-15.md)）并逐项完成修复与回归测试：
+
+- **数据层与备份**：`AppDatabase` / `RoomItemRepository` 增加 `applied_commands` 7 天窗口清理（`CR-01`）与跨清单移动末尾追加 `sortKey`（`CR-13`）；`RoomBackupRepository.merge()` 改为在目标清单末尾顺延分配 `sortKey`（`CR-03`）；`BackupCodec.decode` 与 `SettingsScreen` 剥离 UTF-8 BOM `\uFEFF` 并移除死代码分支（`CR-15`）；导出写入优先使用 `"wt"` 截断模式避免残留尾部字节（`CR-14`）。
+- **协程、Widget 与更新模块**：`WanglemaiApplication` 为 `scope` 安装 `CoroutineExceptionHandler` 并修复 `CancellationException` 传播（`CR-02`/`CR-07`）；`ListProviders`、`WidgetPinCoordinator`、`WidgetUpdateCoordinator`、`WidgetConfigureActivity` 补全恢复兜底、互斥锁保护与配置保存/刷新解耦（`CR-07`/`CR-08`/`CR-09`）；`UpdateChecker` / `ApkDownloader` / `UpdateCenter` 增加 `isIntegrityError` 标识、非活跃 `.part` 清理与 `checkJob` 并发防覆盖（`CR-04`/`CR-05`/`CR-06`）。
+- **主界面与交互状态**：`MainActivity` 修复恢复待办 Snackbar 文案为 `"已恢复为待办"` 并对齐 5 秒倒计时（`CR-10`），消费 `list_id` Intent Extra 防止重建回跳（`CR-11`）；`MainViewModel` / `EditorViewModel` 补齐读写兜底（`CR-12`）；`ManageListsScreen` 为删除/改名提示检测增加 `!submitting` 门控（`CR-16`）。
+- **验证**：在 MuMu 模拟器（`LGE-AN10`，Android 15 / API 35、`360×640dp`、中文桌面 Lawnchair）上补足小屏滚动点击与中文授权弹窗匹配后，全量仪器测试 `52/52` 通过（`RepositoryTest` 23、`MigrationTest` 1、`WidgetRenderingTest` 9、`FrameworkUiTest` 16、`WidgetPinTest` 3）；`:app:testDebugUnitTest` `72/72` 通过、`:app:lintDebug` `0 error`、`prototype/warm/verify.cjs` 30/30、`npm test` 30/30，构建 `v0.4.1`（`versionCode = 12`）并实机覆盖安装验证通过。
+
 ## v0.4.0 · 活页手账视觉焕新与单一待办 / 2026-11-15
 
 在单一待办重构之上，参照同步精修后的 `prototype/warm`（v0.4.0 Editorial Edition）完成五屏原生界面与小部件视觉对齐：

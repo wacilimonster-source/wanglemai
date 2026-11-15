@@ -30,9 +30,9 @@ interface AppDao {
     @Query("SELECT COALESCE(MAX(sortKey),0) FROM items WHERE listId=:listId") suspend fun maxSortKey(listId: String): Long
     @Insert suspend fun insertItem(item: ItemEntity)
     @Insert suspend fun insertItems(items: List<ItemEntity>)
-    @Query("UPDATE items SET listId=:listId,title=:title,note=:note,pinned=:pinned,updatedAt=:time,version=version+1 WHERE id=:id AND version=:version AND deletedAt IS NULL")
+    @Query("UPDATE items SET listId=:listId,title=:title,note=:note,pinned=:pinned,sortKey=:sortKey,updatedAt=:time,version=version+1 WHERE id=:id AND version=:version AND deletedAt IS NULL")
     suspend fun edit(id: String, version: Long, listId: String, title: String, note: String,
-        pinned: Boolean, time: Long): Int
+        pinned: Boolean, sortKey: Long, time: Long): Int
     @Query("UPDATE items SET completed=:completed,completedAt=:completedAt,updatedAt=:time,version=version+1 WHERE id=:id AND version=:version AND deletedAt IS NULL")
     suspend fun complete(id: String, version: Long, completed: Boolean, completedAt: Long?, time: Long): Int
     @Query("UPDATE items SET deletedAt=:time,updatedAt=:time,version=version+1 WHERE id=:id AND version=:version AND deletedAt IS NULL")
@@ -52,6 +52,7 @@ interface AppDao {
 
     @Query("SELECT * FROM applied_commands WHERE commandId=:id") suspend fun command(id: String): AppliedCommand?
     @Insert suspend fun insertCommand(command: AppliedCommand)
+    @Query("DELETE FROM applied_commands WHERE createdAt < :cutoff") suspend fun pruneCommands(cutoff: Long)
 
     @Query("SELECT * FROM widget_configs WHERE appWidgetId=:id") suspend fun config(id: Int): WidgetConfig?
     @Query("SELECT * FROM widget_configs ORDER BY appWidgetId") suspend fun configs(): List<WidgetConfig>

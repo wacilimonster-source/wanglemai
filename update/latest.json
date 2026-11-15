@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "version": "v0.4.0",
-  "releaseName": "忘了没 v0.4.0 · 活页手账焕新与单一待办",
-  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.4.0",
-  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.4.0/wanglemai-0.4.0-debug.apk",
-  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.4.0/releases/wanglemai-0.4.0-debug.apk",
-  "sha256": "ee112d2da8043a18c29979e42f3d1d145e440a6cd95ac3d4de1d4159c6ee24a2",
-  "publishedAt": "2026-11-14T17:55:27Z"
+  "version": "v0.4.1",
+  "releaseName": "忘了没 v0.4.1 · 代码评审修复与稳定性增强",
+  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.4.1",
+  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.4.1/wanglemai-0.4.1-debug.apk",
+  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.4.1/releases/wanglemai-0.4.1-debug.apk",
+  "sha256": "a9888c3ed353551273ce4be91dee9f070c9e7d54d76fb079318fcb5413024e86",
+  "publishedAt": "2026-11-15T03:28:41Z"
 }

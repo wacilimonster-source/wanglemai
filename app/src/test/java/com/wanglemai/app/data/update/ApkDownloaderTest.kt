@@ -287,6 +287,38 @@ class ApkDownloaderTest {
             throw AssertionError("expected UpdateException")
         } catch (e: UpdateException) {
             assertEquals("没有可用的下载地址", e.message)
+            assertFalse(e.isIntegrityError)
         }
+    }
+
+    @Test
+    fun integrityFailureSetsIntegrityFlagAndIsNotMaskedByFallback() {
+        val expected = ByteArray(64) { 10 }
+        val corrupted = ByteArray(64) { 11 }
+        val opener = FakeOpener(mirrorUrl to FakeStream(corrupted))
+        try {
+            runBlocking {
+                ApkDownloader(streamOpener = opener.opener)
+                    .download(mirrorUrl, githubUrl, sha256(expected), tmp.root) { _, _, _ -> }
+            }
+            throw AssertionError("expected UpdateException")
+        } catch (e: UpdateException) {
+            assertTrue(e.isIntegrityError)
+            assertEquals("安装包校验失败，已删除", e.message)
+        }
+    }
+
+    @Test
+    fun stalePartFilesAreCleanedBeforeDownloading() = runBlocking {
+        val data = ByteArray(64) { 12 }
+        File(tmp.root, "wanglemai-0.2.1-debug.apk.orphan.part").writeBytes(ByteArray(4))
+        File(tmp.root, "keep.txt").writeText("ok")
+        val opener = FakeOpener(mirrorUrl to FakeStream(data))
+        ApkDownloader(streamOpener = opener.opener)
+            .download(mirrorUrl, null, sha256(data), tmp.root) { _, _, _ -> }
+        assertEquals(
+            listOf("keep.txt", "wanglemai-0.2.2-debug.apk"),
+            tmp.root.listFiles()!!.map { it.name }.sorted()
+        )
     }
 }

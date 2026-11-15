@@ -37,6 +37,7 @@ import com.wanglemai.app.app
 import com.wanglemai.app.data.db.WidgetConfig
 import com.wanglemai.app.domain.*
 import com.wanglemai.app.ui.theme.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -136,7 +137,13 @@ class WidgetConfigureActivity : ComponentActivity() {
                                 )
                             )
                         }
-                        container.widgets.refresh(widgetId)
+                        try {
+                            container.widgets.refresh(widgetId)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            // Config transaction already committed; host repaint will recover on next update.
+                        }
                     }
                     setResult(
                         Activity.RESULT_OK,

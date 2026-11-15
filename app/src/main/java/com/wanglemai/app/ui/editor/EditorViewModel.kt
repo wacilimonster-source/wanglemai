@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.wanglemai.app.WanglemaiApplication
 import com.wanglemai.app.app
 import com.wanglemai.app.domain.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -205,6 +206,14 @@ class EditorViewModel(
         }
     }
 
+    private suspend fun loadItemSafe(id: String): Result<Item?> = try {
+        Result.success(withContext(Dispatchers.IO) { repo.getItem(id) })
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
     private suspend fun writeDraft(snapshot: EditorUiState, epoch: Long) {
         if (!snapshot.loaded || snapshot.itemMissing || !snapshot.dirty) return
         draftMutex.withLock {
@@ -220,11 +229,18 @@ class EditorViewModel(
                 batch = snapshot.batch,
                 baseItemVersion = snapshot.draftBaseVersion
             )
-            withContext(Dispatchers.IO) {
-                repo.saveDraft(draft)
-                if (previous != null && previous != key) runCatching { repo.deleteDraft(previous) }
+            val saved = try {
+                withContext(Dispatchers.IO) {
+                    repo.saveDraft(draft)
+                    if (previous != null && previous != key) runCatching { repo.deleteDraft(previous) }
+                }
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                false
             }
-            lastSavedDraftKey = key
+            if (saved) lastSavedDraftKey = key
         }
     }
 
@@ -287,10 +303,9 @@ class EditorViewModel(
                     _events.send(EditorEvent.Finished)
                 }
             } else {
-                val latest = if (mode == EditorMode.EDIT) withContext(Dispatchers.IO) {
-                    repo.getItem(itemId.orEmpty())
-                } else null
-                val missing = mode == EditorMode.EDIT && latest == null
+                val latestResult = if (mode == EditorMode.EDIT) loadItemSafe(itemId.orEmpty()) else Result.success(null)
+                val latest = latestResult.getOrNull()
+                val missing = mode == EditorMode.EDIT && latestResult.isSuccess && latest == null
                 if (latest != null && result is MutationResult.Conflict) {
                     pendingLatestVersion = latest.version
                 }
@@ -320,14 +335,15 @@ class EditorViewModel(
                 clearDraftAfterSave(snapshot)
                 _events.send(EditorEvent.Finished)
             } else {
-                val latest = withContext(Dispatchers.IO) { repo.getItem(itemId) }
+                val latestResult = loadItemSafe(itemId)
+                val latest = latestResult.getOrNull()
                 if (latest != null && result is MutationResult.Conflict) {
                     pendingLatestVersion = latest.version
                 }
                 _state.value = _state.value.copy(
                     busy = false,
                     error = result.message(),
-                    itemMissing = latest == null,
+                    itemMissing = latestResult.isSuccess && latest == null,
                     conflict = latest != null && result is MutationResult.Conflict
                 )
             }
@@ -337,7 +353,12 @@ class EditorViewModel(
     fun reloadLatest() {
         if (mode != EditorMode.EDIT || itemId == null) return
         viewModelScope.launch {
-            val item = withContext(Dispatchers.IO) { repo.getItem(itemId) }
+            val itemResult = loadItemSafe(itemId)
+            if (itemResult.isFailure) {
+                _state.value = _state.value.copy(error = "读取最新记录失败，请重试")
+                return@launch
+            }
+            val item = itemResult.getOrNull()
             if (item == null) {
                 _state.value = _state.value.copy(itemMissing = true, conflict = false,
                     error = "记录已被删除")
@@ -394,7 +415,12 @@ class EditorViewModel(
                 lastSavedDraftKey = null
             }
             if (mode == EditorMode.EDIT && itemId != null) {
-                val item = withContext(Dispatchers.IO) { repo.getItem(itemId) }
+                val itemResult = loadItemSafe(itemId)
+                if (itemResult.isFailure) {
+                    _state.value = _state.value.copy(draftRestored = false, error = "读取最新记录失败，请重试")
+                    return@launch
+                }
+                val item = itemResult.getOrNull()
                 if (item == null) {
                     _state.value = _state.value.copy(itemMissing = true, draftRestored = false,
                         conflict = false, dirty = false, error = "记录已被删除")

@@ -52,6 +52,9 @@ class UpdateCenter(
     }
 ) {
     @Volatile
+    private var checkJob: Job? = null
+
+    @Volatile
     private var downloadJob: Job? = null
 
     val checking = MutableStateFlow(false)
@@ -62,25 +65,37 @@ class UpdateCenter(
         extraBufferCapacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
+    init {
+        scope.launch { ApkDownloader.cleanupStaleParts(updatesDir) }
+    }
+
     /** Re-checks the latest release; a running download is cancelled because its result goes stale. */
     fun check(currentVersion: String) {
+        checkJob?.cancel()
         downloadJob?.cancel()
         checking.value = true
         checkError.value = null
         result.value = null
-        scope.launch {
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            val self = coroutineContext[Job]
             try {
                 val checked = checkLatest(currentVersion)
-                discardDownloadFromOlderVersion(checked.latestVersion)
-                result.value = checked
+                if (checkJob === self) {
+                    discardDownloadFromOlderVersion(checked.latestVersion)
+                    result.value = checked
+                }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: UpdateException) {
-                checkError.value = e.message
+                if (checkJob === self) checkError.value = e.message
             } catch (_: Exception) {
-                checkError.value = "检查更新失败，请稍后重试"
+                if (checkJob === self) checkError.value = "检查更新失败，请稍后重试"
             } finally {
-                checking.value = false
+                if (checkJob === self) checking.value = false
             }
         }
+        checkJob = job
+        job.start()
     }
 
     /** A package downloaded for another release must never be offered as the current one. */
