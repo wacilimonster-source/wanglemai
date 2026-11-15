@@ -13,8 +13,16 @@ private const val COMMAND_RETENTION_MS = 7L * 24 * 60 * 60 * 1000
 class RoomItemRepository(private val db: AppDatabase) : ItemRepository {
     private val dao = db.dao()
 
+    // Best-effort guard: racing first callers may both run ensureDefaults, which
+    // stays idempotent (IGNORE insert) — the flag just skips the steady-state cost
+    // of running it inside every mutation.
+    @Volatile
+    private var defaultsReady = false
+
     override suspend fun initialize() {
+        if (defaultsReady) return
         ensureDefaults()
+        defaultsReady = true
     }
 
     private suspend fun ensureDefaults() {

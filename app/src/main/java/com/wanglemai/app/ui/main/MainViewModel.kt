@@ -8,7 +8,7 @@ import com.wanglemai.app.domain.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val container = application.app.container
     private val repo = container.repository
@@ -34,7 +34,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         else DEFAULT_TODO
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DEFAULT_TODO)
 
-    val items = combine(listId, completed, search) { id, done, query -> Triple(id, done, query) }
+    // Empty queries (initial state, clearing) pass instantly; typing debounces the
+    // unindexed full-scan query so every keystroke does not restart a Room query.
+    private val debouncedSearch = search.debounce { query -> if (query.isBlank()) 0 else 250 }
+
+    val items = combine(listId, completed, debouncedSearch) { id, done, query -> Triple(id, done, query) }
         .flatMapLatest { (id, done, query) ->
             repo.observeItems(id, done, query)
                 .onStart { loading.value = true }
@@ -148,37 +152,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         error.value = null
     }
 
+    // NonCancellable bodies: a committed intent must not roll back when the UI
+    // scope dies mid-transaction (activity recreation, navigation away).
     suspend fun setCompleted(item: Item): MutationResult = withContext(Dispatchers.IO) {
-        container.mutate { repo.setCompleted(item.id, item.version, !item.completed) }
+        withContext(NonCancellable) {
+            container.mutate { repo.setCompleted(item.id, item.version, !item.completed) }
+        }
     }
 
     suspend fun togglePin(item: Item): MutationResult = withContext(Dispatchers.IO) {
-        container.mutate {
-            repo.update(item.id, item.version, ItemInput(item.listId, item.title, item.note, !item.pinned))
+        withContext(NonCancellable) {
+            container.mutate {
+                repo.update(item.id, item.version, ItemInput(item.listId, item.title, item.note, !item.pinned))
+            }
         }
     }
 
     suspend fun undo(token: UndoToken): MutationResult = withContext(Dispatchers.IO) {
-        container.mutate { repo.undoCompletion(token) }
+        withContext(NonCancellable) {
+            container.mutate { repo.undoCompletion(token) }
+        }
     }
 
     suspend fun createList(name: String): MutationResult = withContext(Dispatchers.IO) {
-        val result = container.mutate { repo.createList(name) }
-        val id = (result as? MutationResult.Success)?.itemIds?.firstOrNull()
-        if (id != null) selectList(id)
-        result
+        withContext(NonCancellable) {
+            val result = container.mutate { repo.createList(name) }
+            val id = (result as? MutationResult.Success)?.itemIds?.firstOrNull()
+            if (id != null) selectList(id)
+            result
+        }
     }
 
     suspend fun renameList(list: TaskList, name: String): MutationResult = withContext(Dispatchers.IO) {
-        container.mutate { repo.renameList(list.id, list.version, name) }
+        withContext(NonCancellable) {
+            container.mutate { repo.renameList(list.id, list.version, name) }
+        }
     }
 
     suspend fun deleteList(list: TaskList): MutationResult = withContext(Dispatchers.IO) {
-        val result = container.mutate { repo.deleteListAndMoveToDefault(list.id, list.version) }
-        if (result is MutationResult.Success && selected.value == list.id) {
-            selected.value = DEFAULT_TODO
-            savePreferenceQuietly(PREF_LAST_LIST, DEFAULT_TODO)
+        withContext(NonCancellable) {
+            val result = container.mutate { repo.deleteListAndMoveToDefault(list.id, list.version) }
+            if (result is MutationResult.Success && selected.value == list.id) {
+                selected.value = DEFAULT_TODO
+                savePreferenceQuietly(PREF_LAST_LIST, DEFAULT_TODO)
+            }
+            result
         }
-        result
     }
 }

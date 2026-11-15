@@ -24,7 +24,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                 val container = context.app.container
                 when (action) {
                     "${context.packageName}.complete" -> {
-                        val result = container.mutate {
+                        val result = container.mutate(refreshWidgets = false) {
                             container.repository.setCompleted(
                                 intent.getStringExtra("item_id").orEmpty(),
                                 intent.getLongExtra("version", -1),
@@ -33,7 +33,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                             )
                         }
                         if (result is MutationResult.Success) {
-                            container.widgets.refresh(widgetId)
+                            container.widgets.refreshAll()
                         } else {
                             if (result is MutationResult.Conflict || result is MutationResult.NotFound) {
                                 runCatching { container.db.dao().clearWidgetUndo(widgetId) }
@@ -42,13 +42,13 @@ class WidgetActionReceiver : BroadcastReceiver() {
                         }
                     }
                     "${context.packageName}.undo" -> {
-                        val result = container.mutate {
+                        val result = container.mutate(refreshWidgets = false) {
                             container.repository.undoWidgetCompletion(
                                 widgetId, intent.getStringExtra("command_id").orEmpty()
                             )
                         }
                         if (result is MutationResult.Success) {
-                            container.widgets.refresh(widgetId)
+                            container.widgets.refreshAll()
                         } else {
                             container.widgets.showMessage(widgetId, widgetMessage(result))
                         }

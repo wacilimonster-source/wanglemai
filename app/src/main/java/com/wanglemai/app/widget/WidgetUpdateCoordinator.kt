@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.room.withTransaction
 import com.wanglemai.app.R
 import com.wanglemai.app.data.RoomItemRepository
@@ -16,19 +17,51 @@ import com.wanglemai.app.data.db.WidgetConfig
 import com.wanglemai.app.domain.*
 import com.wanglemai.app.ui.editor.QuickEntryActivity
 import com.wanglemai.app.ui.main.MainActivity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class WidgetUpdateCoordinator(
     private val context: Context,
     private val db: AppDatabase,
-    private val repository: RoomItemRepository
+    private val repository: RoomItemRepository,
+    backgroundScope: CoroutineScope
 ) {
     private val mutex = Mutex()
     private val manager = AppWidgetManager.getInstance(context)
     private val renderer = WidgetRenderer(context)
     private val transientMessages = mutableMapOf<Int, String>()
     private val providers = listOf(ListSmallProvider::class.java, ListLargeProvider::class.java)
+
+    // Coalesced best-effort refresh queue: bursts of mutations collapse into a
+    // single render pass, and callers never wait for widget rendering.
+    private val refreshRequests = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    init {
+        backgroundScope.launch {
+            refreshRequests.collect {
+                try {
+                    refreshAll()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("WidgetUpdate", "Background widget refresh failed", e)
+                }
+            }
+        }
+    }
+
+    /** Enqueue one full refresh; multiple rapid requests render at most twice (current + catch-up). */
+    fun requestRefreshAll() {
+        refreshRequests.tryEmit(Unit)
+    }
 
     suspend fun refreshAll() {
         providers.forEach { provider ->

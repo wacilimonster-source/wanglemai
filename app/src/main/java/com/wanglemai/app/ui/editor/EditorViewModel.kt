@@ -69,11 +69,11 @@ class EditorViewModel(
     private val _events = Channel<EditorEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    private var commandId = UUID.randomUUID().toString()
+    @Volatile private var commandId = UUID.randomUUID().toString()
     private var draftJob: Job? = null
     private val draftMutex = Mutex()
     @Volatile private var draftEpoch = 0L
-    private var pendingLatestVersion: Long? = null
+    @Volatile private var pendingLatestVersion: Long? = null
     @Volatile private var lastSavedDraftKey: String? = null
 
     init {

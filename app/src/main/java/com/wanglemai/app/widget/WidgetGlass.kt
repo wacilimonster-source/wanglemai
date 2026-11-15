@@ -9,14 +9,24 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
+import android.util.LruCache
 import com.wanglemai.app.R
 import kotlin.math.ceil
 
 /** A dp-resolution background keeps multi-size RemoteViews well within bitmap memory limits. */
 object WidgetGlass {
+    private const val CACHE_MAX_BYTES = 8 * 1024 * 1024
+    private val cache = object : LruCache<String, Bitmap>(CACHE_MAX_BYTES) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+    }
+
     fun background(context: Context, layout: WidgetLayout, dark: Boolean): Bitmap {
         val width = ceil(layout.widthDp).toInt().coerceIn(1, 1024)
         val height = ceil(layout.heightDp).toInt().coerceIn(1, 1024)
+        // The render only depends on size, theme, and density; RemoteViews copies
+        // pixels during marshalling, so sharing one cached bitmap is safe.
+        val key = "$width-$height-$dark-${context.resources.configuration.densityDpi}"
+        cache.get(key)?.let { return it }
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -42,6 +52,7 @@ object WidgetGlass {
         canvas.drawPath(top, paint)
         paint.color = Color.parseColor(if (dark) "#1F000000" else "#0F55412C")
         canvas.drawLine(radius, height - .5f, width - radius, height - .5f, paint)
+        cache.put(key, bitmap)
         return bitmap
     }
 }

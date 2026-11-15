@@ -55,6 +55,7 @@ import com.wanglemai.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 
@@ -363,13 +364,17 @@ private fun ListScreen(
                                     else -> {
                                         Column(modifier = Modifier.fillMaxWidth()) {
                                             items.forEachIndexed { index, item ->
-                                                NotebookPaperRow(
-                                                    index = index + 1,
-                                                    item = item,
-                                                    onToggle = { onToggle(item) },
-                                                    onEdit = { onEdit(item) },
-                                                    onTogglePin = { onTogglePin(item) }
-                                                )
+                                                // Keying by id lets reorder/toggle recomposition reuse and
+                                                // skip unchanged rows instead of re-diffing by position.
+                                                key(item.id) {
+                                                    NotebookPaperRow(
+                                                        index = index + 1,
+                                                        item = item,
+                                                        onToggle = { onToggle(item) },
+                                                        onEdit = { onEdit(item) },
+                                                        onTogglePin = { onTogglePin(item) }
+                                                    )
+                                                }
                                             }
 
                                             // Ghost Ruled Lines when active items < 6 and not searching
@@ -434,7 +439,16 @@ private fun AlmanacHeader(
     onOpenSettings: () -> Unit
 ) {
     val palette = LocalEditorialPalette.current
-    val today = remember { LocalDate.now() }
+    var today by remember { mutableStateOf(LocalDate.now()) }
+    // Long-lived processes must roll the date stamp over at midnight.
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = LocalDateTime.now()
+            val nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay()
+            delay(java.time.Duration.between(now, nextMidnight).toMillis().coerceAtLeast(1))
+            today = LocalDate.now()
+        }
+    }
     val monthAbbr = remember(today) {
         today.month.getDisplayName(JavaTextStyle.SHORT, Locale.ENGLISH).uppercase(Locale.ENGLISH)
     }
