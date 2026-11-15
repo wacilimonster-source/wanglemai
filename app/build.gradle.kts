@@ -10,8 +10,8 @@ android {
         applicationId = "com.wanglemai.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "0.4.2-mvp"
+        versionCode = 14
+        versionName = "0.4.3-mvp"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }

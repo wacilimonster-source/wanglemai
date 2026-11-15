@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "version": "v0.4.2",
-  "releaseName": "忘了没 v0.4.2 · 自适应图标与桌面触点完善",
-  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.4.2",
-  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.4.2/wanglemai-0.4.2-debug.apk",
-  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.4.2/releases/wanglemai-0.4.2-debug.apk",
-  "sha256": "6e706d4b1010c4c320741e9d4e2612ec1b8870090082d0b13d786619c065d697",
-  "publishedAt": "2026-11-15T05:15:22Z"
+  "version": "v0.4.3",
+  "releaseName": "忘了没 v0.4.3 MVP",
+  "releaseUrl": "https://github.com/wacilimonster-source/wanglemai/releases/tag/v0.4.3",
+  "apkUrl": "https://github.com/wacilimonster-source/wanglemai/releases/download/v0.4.3/wanglemai-0.4.3-debug.apk",
+  "apkMirrorUrl": "https://cdn.jsdelivr.net/gh/wacilimonster-source/wanglemai@v0.4.3/releases/wanglemai-0.4.3-debug.apk",
+  "sha256": "75a8c7abb111cb6714ca82503a349b66138ddb2dd964cce66a4ff1a5756c5716",
+  "publishedAt": "2026-11-15T16:05:15Z"
 }
