@@ -1,4 +1,64 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
-    <path android:fillColor="#8A5335" android:pathData="M8,0 L40,0 Q48,0 48,8 L48,40 Q48,48 40,48 L8,48 Q0,48 0,40 L0,8 Q0,0 8,0"/>
-    <path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M12,25 L21,33 L36,15"/>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Fallback rounded-square espresso badge matching Direction B -->
+    <path
+        android:fillColor="#28211B"
+        android:pathData="M18,0 L90,0 Q108,0 108,18 L108,90 Q108,108 90,108 L18,108 Q0,108 0,90 L0,18 Q0,0 18,0 Z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="-4.5"
+        android:scaleX="1.12"
+        android:scaleY="1.12">
+        <path
+            android:fillColor="#E5DBCC"
+            android:pathData="M38.5,29 L74.5,29 Q80,29 80,34.5 L80,76.5 Q80,82 74.5,82 L38.5,82 Q33,82 33,76.5 L33,34.5 Q33,29 38.5,29 Z" />
+        <path
+            android:fillColor="#9A4B26"
+            android:pathData="M56.5,28 L56.5,24.5 Q56.5,21.5 59.5,21.5 L69.5,21.5 Q72.5,21.5 72.5,24.5 L72.5,28 Z" />
+        <path
+            android:fillColor="#FFFDF9"
+            android:pathData="M35,26 L71,26 Q77,26 77,32 L77,74 Q77,80 71,80 L35,80 Q29,80 29,74 L29,32 Q29,26 35,26 Z" />
+        <path
+            android:fillColor="#F4ECE0"
+            android:pathData="M35,26 L71,26 Q77,26 77,32 L77,36.2 L29,36.2 L29,32 Q29,26 35,26 Z" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M32.5,36.2 L36.5,36.2 M39.8,36.2 L43.8,36.2 M47.1,36.2 L51.1,36.2 M54.4,36.2 L58.4,36.2 M61.7,36.2 L65.7,36.2 M69.0,36.2 L73.5,36.2"
+            android:strokeColor="#C4B39C"
+            android:strokeLineCap="round"
+            android:strokeWidth="1.2" />
+        <path
+            android:fillColor="#9A4B26"
+            android:pathData="M37,31 m-2.1,0 a2.1,2.1 0 1,0 4.2,0 a2.1,2.1 0 1,0 -4.2,0" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M37.5,37.4 L37.5,79.2"
+            android:strokeColor="#E2BBAE"
+            android:strokeWidth="1.2" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M39,49.5 L73,49.5 M39,62 L73,62 M39,73 L73,73"
+            android:strokeColor="#EBE1D2"
+            android:strokeLineCap="round"
+            android:strokeWidth="1.05" />
+        <group
+            android:pivotX="56"
+            android:pivotY="57"
+            android:rotation="45">
+            <path
+                android:fillColor="#9A4B26"
+                android:pathData="M49.5,46 L62.5,46 Q67,46 67,50.5 L67,63.5 Q67,68 62.5,68 L49.5,68 Q45,68 45,63.5 L45,50.5 Q45,46 49.5,46 Z" />
+        </group>
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M49.2,57.2 L53.9,61.9 L63.2,52.0"
+            android:strokeColor="#FFFAF4"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:strokeWidth="3.3" />
+    </group>
 </vector>

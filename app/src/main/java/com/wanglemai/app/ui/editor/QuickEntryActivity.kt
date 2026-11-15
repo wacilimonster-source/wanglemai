@@ -71,13 +71,24 @@ class QuickEntryActivity : ComponentActivity() {
             Intent(context, QuickEntryActivity::class.java)
                 .putExtra("mode", "create")
                 .putExtra("list_id", listId)
-                .apply { originWidgetId?.let { putExtra("origin_widget_id", it) } }
+                .fromWidget(originWidgetId)
 
         fun editIntent(context: Context, itemId: String, originWidgetId: Int? = null) =
             Intent(context, QuickEntryActivity::class.java)
                 .putExtra("mode", "edit")
                 .putExtra("item_id", itemId)
-                .apply { originWidgetId?.let { putExtra("origin_widget_id", it) } }
+                .fromWidget(originWidgetId)
+
+        /** Widget launches run in their own on-home task (distinct taskAffinity): finishing
+         *  create, edit-save or edit-delete returns to the desktop instead of revealing a
+         *  background MainActivity, which a default-affinity NEW_TASK launch would join.
+         *  In-app launches keep joining the caller's task. */
+        private fun Intent.fromWidget(originWidgetId: Int?): Intent = apply {
+            if (originWidgetId != null) {
+                putExtra("origin_widget_id", originWidgetId)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_TASK_ON_HOME)
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -246,17 +257,23 @@ private fun EditorSheet(
                         onClick = onClose,
                         enabled = !state.busy,
                         modifier = Modifier.semantics { contentDescription = "取消" },
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(EditorialMetrics.RadiusChip),
                         color = palette.surfaceWarm,
                         border = BorderStroke(1.dp, palette.lineStrong)
                     ) {
-                        Text(
-                            text = "收起",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = palette.text,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .defaultMinSize(minHeight = EditorialMetrics.CompactControlHeight)
+                                .padding(horizontal = 13.dp, vertical = 7.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "收起",
+                                fontSize = EditorialMetrics.ControlTextSize,
+                                fontWeight = FontWeight.SemiBold,
+                                color = palette.text
+                            )
+                        }
                     }
                 }
 
@@ -270,7 +287,7 @@ private fun EditorSheet(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                                .padding(start = 12.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -280,17 +297,22 @@ private fun EditorSheet(
                                 fontSize = 12.sp,
                                 color = palette.muted
                             )
-                            Text(
-                                text = "丢弃草稿",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = palette.primary,
+                            Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .heightIn(min = EditorialMetrics.TouchTargetMin)
+                                    .clip(RoundedCornerShape(EditorialMetrics.RadiusChip))
                                     .clickable(enabled = !state.busy, onClick = vm::discardDraft)
                                     .semantics { contentDescription = "丢弃" }
-                                    .padding(horizontal = 6.dp, vertical = 3.dp)
-                            )
+                                    .padding(horizontal = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "丢弃草稿",
+                                    fontSize = EditorialMetrics.ControlTextSize,
+                                    fontWeight = FontWeight.Bold,
+                                    color = palette.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -565,16 +587,19 @@ private fun EditorSheet(
                             enabled = state.canSave,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(46.dp)
+                                .heightIn(min = EditorialMetrics.PrimaryButtonHeight)
                                 .semantics { contentDescription = "保存并继续" },
-                            shape = RoundedCornerShape(13.dp),
+                            shape = RoundedCornerShape(EditorialMetrics.RadiusButton),
                             color = palette.soft,
                             border = BorderStroke(1.dp, palette.lineStrong)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier.defaultMinSize(minHeight = EditorialMetrics.PrimaryButtonHeight),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
                                     text = "入册并继续",
-                                    fontSize = 14.sp,
+                                    fontSize = EditorialMetrics.ButtonTextSize,
                                     fontWeight = FontWeight.Bold,
                                     color = if (state.canSave) palette.text else palette.faint
                                 )
@@ -586,16 +611,19 @@ private fun EditorSheet(
                             enabled = state.canSave,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(46.dp)
+                                .heightIn(min = EditorialMetrics.PrimaryButtonHeight)
                                 .semantics { contentDescription = "删除这条记录" },
-                            shape = RoundedCornerShape(13.dp),
+                            shape = RoundedCornerShape(EditorialMetrics.RadiusButton),
                             color = palette.dangerSoft,
                             border = BorderStroke(1.dp, palette.danger.copy(alpha = 0.35f))
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier.defaultMinSize(minHeight = EditorialMetrics.PrimaryButtonHeight),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
                                     text = "撕下删除",
-                                    fontSize = 14.sp,
+                                    fontSize = EditorialMetrics.ButtonTextSize,
                                     fontWeight = FontWeight.Bold,
                                     color = palette.danger
                                 )
@@ -608,27 +636,30 @@ private fun EditorSheet(
                         enabled = state.canSave,
                         modifier = Modifier
                             .weight(1.3f)
-                            .height(46.dp)
+                            .heightIn(min = EditorialMetrics.PrimaryButtonHeight)
                             .shadow(
                                 elevation = if (state.canSave) 4.dp else 0.dp,
-                                shape = RoundedCornerShape(13.dp),
+                                shape = RoundedCornerShape(EditorialMetrics.RadiusButton),
                                 ambientColor = palette.primary.copy(alpha = 0.4f),
                                 spotColor = palette.primary.copy(alpha = 0.4f)
                             )
                             .semantics {
                                 contentDescription = if (state.mode == EditorMode.EDIT) "保存修改" else "保存"
                             },
-                        shape = RoundedCornerShape(13.dp),
+                        shape = RoundedCornerShape(EditorialMetrics.RadiusButton),
                         color = if (state.canSave) palette.primary else palette.soft
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.defaultMinSize(minHeight = EditorialMetrics.PrimaryButtonHeight),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
                                 text = when {
                                     state.busy -> "保存中…"
                                     state.mode == EditorMode.EDIT -> "保存修订"
                                     else -> "入册保存"
                                 },
-                                fontSize = 14.sp,
+                                fontSize = EditorialMetrics.ButtonTextSize,
                                 fontWeight = FontWeight.Bold,
                                 color = if (state.canSave) palette.onPrimary else palette.faint
                             )
@@ -680,7 +711,7 @@ private fun MetaPill(
     onClick: () -> Unit
 ) {
     val palette = LocalEditorialPalette.current
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(EditorialMetrics.RadiusChip)
     Surface(
         onClick = onClick,
         enabled = enabled,
@@ -695,12 +726,18 @@ private fun MetaPill(
             color = if (active) palette.primary else palette.lineStrong.copy(alpha = 0.65f)
         )
     ) {
-        Text(
-            text = text,
-            fontSize = 12.sp,
-            fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
-            color = if (active) palette.primary else palette.text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
-        )
+        Box(
+            modifier = Modifier
+                .defaultMinSize(minHeight = EditorialMetrics.CompactControlHeight)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = EditorialMetrics.ControlTextSize,
+                fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
+                color = if (active) palette.primary else palette.text
+            )
+        }
     }
 }

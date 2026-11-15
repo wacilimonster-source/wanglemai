@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -281,7 +283,7 @@ private fun ListScreen(
                     onManageLists = onManageLists,
                     onOpenSettings = onOpenSettings
                 )
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(6.dp))
             }
 
             // 2. Connected Folder Index Tabs + Stacked Notebook Sheet
@@ -454,157 +456,167 @@ private fun AlmanacHeader(
         else -> "纸页空空 · 随时落笔"
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
-    ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Double-bordered Date Stamp Box
-            Box(
-                modifier = Modifier
-                    .width(44.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(palette.surface)
-                    .border(1.5.dp, palette.primary.copy(alpha = 0.65f), RoundedCornerShape(11.dp))
-                    .padding(2.5.dp)
-                    .border(1.dp, palette.line, RoundedCornerShape(8.dp))
-                    .padding(vertical = 3.dp, horizontal = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = monthAbbr,
-                        fontFamily = EditorialMono,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 1.sp,
-                        color = palette.primary,
-                        lineHeight = 11.sp
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .padding(vertical = 1.5.dp)
-                            .width(24.dp),
-                        thickness = 0.8.dp,
-                        color = palette.line
-                    )
-                    Text(
-                        text = dayStr,
-                        fontFamily = EditorialSerif,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = palette.text,
-                        lineHeight = 19.sp
-                    )
-                }
-            }
-
-            Column {
-                Text(
-                    text = "慢慢来，一件件。",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = palette.text,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    fontSize = 12.sp,
-                    color = palette.muted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val compactWidth = maxWidth < 348.dp
+        val titleStyle = if (compactWidth) {
+            MaterialTheme.typography.titleLarge.copy(fontSize = 19.sp, lineHeight = 26.sp)
+        } else {
+            MaterialTheme.typography.headlineSmall
         }
-
-        // Top-Right Tactile Actions: [≡ 目录] + [⚙ 设置]
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(top = 2.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
         ) {
-            Surface(
-                onClick = onManageLists,
+            Row(
                 modifier = Modifier
-                    .height(36.dp)
-                    .semantics { contentDescription = "管理清单" },
-                shape = RoundedCornerShape(11.dp),
-                color = palette.surface,
-                contentColor = palette.text,
-                border = BorderStroke(1.dp, palette.lineStrong),
-                shadowElevation = 1.dp
+                    .weight(1f)
+                    .padding(end = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(if (compactWidth) 9.dp else 12.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // Double-bordered Date Stamp Box
+                Box(
+                    modifier = Modifier
+                        .width(44.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(palette.surface)
+                        .border(1.5.dp, palette.primary.copy(alpha = 0.65f), RoundedCornerShape(11.dp))
+                        .padding(2.5.dp)
+                        .border(1.dp, palette.line, RoundedCornerShape(8.dp))
+                        .padding(vertical = 3.dp, horizontal = 4.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Canvas(modifier = Modifier.size(13.dp)) {
-                        val stroke = 1.5.dp.toPx()
-                        val y1 = size.height * 0.22f
-                        val y2 = size.height * 0.50f
-                        val y3 = size.height * 0.78f
-                        drawLine(palette.text, Offset(0f, y1), Offset(size.width, y1), stroke, StrokeCap.Round)
-                        drawLine(palette.text, Offset(0f, y2), Offset(size.width * 0.75f, y2), stroke, StrokeCap.Round)
-                        drawLine(palette.text, Offset(0f, y3), Offset(size.width * 0.90f, y3), stroke, StrokeCap.Round)
-                        drawCircle(palette.primary, radius = 1.6.dp.toPx(), center = Offset(size.width * 0.85f, y2))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = monthAbbr,
+                            fontFamily = EditorialMono,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.sp,
+                            color = palette.primary,
+                            lineHeight = 11.sp
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier
+                                .padding(vertical = 1.5.dp)
+                                .width(24.dp),
+                            thickness = 0.8.dp,
+                            color = palette.line
+                        )
+                        Text(
+                            text = dayStr,
+                            fontFamily = EditorialSerif,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = palette.text,
+                            lineHeight = 19.sp
+                        )
                     }
+                }
+
+                Column {
                     Text(
-                        text = "目录",
+                        text = "慢慢来，一件件。",
+                        style = titleStyle,
+                        color = palette.text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = palette.text
+                        color = palette.muted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            Surface(
-                onClick = onOpenSettings,
-                modifier = Modifier
-                    .size(36.dp)
-                    .semantics { contentDescription = "设置" },
-                shape = RoundedCornerShape(11.dp),
-                color = palette.surface,
-                contentColor = palette.text,
-                border = BorderStroke(1.dp, palette.lineStrong),
-                shadowElevation = 1.dp
+            // Top-Right Tactile Actions: [≡ 目录] + [⚙ 设置]
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Canvas(modifier = Modifier.size(15.dp)) {
-                        val stroke = 1.4.dp.toPx()
-                        val center = Offset(size.width / 2f, size.height / 2f)
-                        val rInner = size.minDimension * 0.19f
-                        val rMid = size.minDimension * 0.34f
-                        val rOuter = size.minDimension * 0.46f
-                        drawCircle(
-                            color = palette.text,
-                            radius = rInner,
-                            center = center,
-                            style = Stroke(width = stroke)
+                Surface(
+                    onClick = onManageLists,
+                    modifier = Modifier.semantics { contentDescription = "管理清单" },
+                    shape = RoundedCornerShape(EditorialMetrics.RadiusControl),
+                    color = palette.surface,
+                    contentColor = palette.text,
+                    border = BorderStroke(1.dp, palette.lineStrong),
+                    shadowElevation = 1.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = EditorialMetrics.StandardControlHeight)
+                            .padding(horizontal = if (compactWidth) 10.dp else 13.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Canvas(modifier = Modifier.size(14.dp)) {
+                            val stroke = 1.5.dp.toPx()
+                            val y1 = size.height * 0.22f
+                            val y2 = size.height * 0.50f
+                            val y3 = size.height * 0.78f
+                            drawLine(palette.text, Offset(0f, y1), Offset(size.width, y1), stroke, StrokeCap.Round)
+                            drawLine(palette.text, Offset(0f, y2), Offset(size.width * 0.75f, y2), stroke, StrokeCap.Round)
+                            drawLine(palette.text, Offset(0f, y3), Offset(size.width * 0.90f, y3), stroke, StrokeCap.Round)
+                            drawCircle(palette.primary, radius = 1.6.dp.toPx(), center = Offset(size.width * 0.85f, y2))
+                        }
+                        Text(
+                            text = "目录",
+                            fontSize = EditorialMetrics.ControlTextSize,
+                            fontWeight = FontWeight.Bold,
+                            color = palette.text
                         )
-                        drawCircle(
-                            color = palette.text,
-                            radius = rMid,
-                            center = center,
-                            style = Stroke(width = stroke)
-                        )
-                        for (i in 0 until 8) {
-                            val angle = Math.toRadians(i * 45.0)
-                            val cos = kotlin.math.cos(angle).toFloat()
-                            val sin = kotlin.math.sin(angle).toFloat()
-                            drawLine(
+                    }
+                }
+
+                Surface(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.semantics { contentDescription = "设置" },
+                    shape = RoundedCornerShape(EditorialMetrics.RadiusControl),
+                    color = palette.surface,
+                    contentColor = palette.text,
+                    border = BorderStroke(1.dp, palette.lineStrong),
+                    shadowElevation = 1.dp
+                ) {
+                    Box(
+                        modifier = Modifier.size(EditorialMetrics.StandardControlHeight),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.size(16.dp)) {
+                            val stroke = 1.4.dp.toPx()
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val rInner = size.minDimension * 0.19f
+                            val rMid = size.minDimension * 0.34f
+                            val rOuter = size.minDimension * 0.46f
+                            drawCircle(
                                 color = palette.text,
-                                start = Offset(center.x + cos * rMid, center.y + sin * rMid),
-                                end = Offset(center.x + cos * rOuter, center.y + sin * rOuter),
-                                strokeWidth = 1.8.dp.toPx(),
-                                cap = StrokeCap.Round
+                                radius = rInner,
+                                center = center,
+                                style = Stroke(width = stroke)
                             )
+                            drawCircle(
+                                color = palette.text,
+                                radius = rMid,
+                                center = center,
+                                style = Stroke(width = stroke)
+                            )
+                            for (i in 0 until 8) {
+                                val angle = Math.toRadians(i * 45.0)
+                                val cos = kotlin.math.cos(angle).toFloat()
+                                val sin = kotlin.math.sin(angle).toFloat()
+                                drawLine(
+                                    color = palette.text,
+                                    start = Offset(center.x + cos * rMid, center.y + sin * rMid),
+                                    end = Offset(center.x + cos * rOuter, center.y + sin * rOuter),
+                                    strokeWidth = 1.8.dp.toPx(),
+                                    cap = StrokeCap.Round
+                                )
+                            }
                         }
                     }
                 }
@@ -630,7 +642,7 @@ private fun IndexTabsBar(
             .zIndex(6f)
             .horizontalScroll(rememberScrollState())
             .padding(end = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         lists.forEach { list ->
@@ -638,103 +650,121 @@ private fun IndexTabsBar(
             val count = activeListCounts[list.id] ?: 0
             Box(
                 modifier = Modifier
-                    .offset(y = if (isActive) 1.5.dp else 0.dp)
-                    .clip(tabShape)
-                    .background(if (isActive) palette.surfaceWarm else palette.soft.copy(alpha = 0.88f))
-                    .drawBehind {
-                        val s = 1.dp.toPx()
-                        val r = 12.dp.toPx()
-                        // Draw rounded top-left, top, and top-right border
-                        drawRoundRect(
-                            color = palette.lineStrong,
-                            topLeft = Offset(0f, 0f),
-                            size = Size(size.width, size.height + r),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(r, r),
-                            style = Stroke(width = s)
+                    .heightIn(min = EditorialMetrics.TouchTargetMin)
+                    .widthIn(min = 76.dp)
+                    .clickable(role = Role.Tab) { onSelectList(list.id) }
+                    .semantics { selected = isActive },
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .offset(y = if (isActive) 1.5.dp else 0.dp)
+                        .defaultMinSize(
+                            minWidth = 76.dp,
+                            minHeight = if (isActive) EditorialMetrics.StandardControlHeight else EditorialMetrics.CompactControlHeight
                         )
-                        if (isActive) {
-                            // Erase the bottom border line so the active tab fuses seamlessly with the sheet
-                            drawRect(
-                                color = palette.surfaceWarm,
-                                topLeft = Offset(s, size.height - 2.dp.toPx()),
-                                size = Size(size.width - s * 2, 3.dp.toPx())
-                            )
-                        } else {
-                            drawLine(
+                        .clip(tabShape)
+                        .background(if (isActive) palette.surfaceWarm else palette.soft.copy(alpha = 0.88f))
+                        .drawBehind {
+                            val s = 1.dp.toPx()
+                            val r = 12.dp.toPx()
+                            drawRoundRect(
                                 color = palette.lineStrong,
-                                start = Offset(0f, size.height),
-                                end = Offset(size.width, size.height),
-                                strokeWidth = s
+                                topLeft = Offset(0f, 0f),
+                                size = Size(size.width, size.height + r),
+                                cornerRadius = CornerRadius(r, r),
+                                style = Stroke(width = s)
+                            )
+                            if (isActive) {
+                                drawRect(
+                                    color = palette.surfaceWarm,
+                                    topLeft = Offset(s, size.height - 2.dp.toPx()),
+                                    size = Size(size.width - s * 2, 3.dp.toPx())
+                                )
+                            } else {
+                                drawLine(
+                                    color = palette.lineStrong,
+                                    start = Offset(0f, size.height),
+                                    end = Offset(size.width, size.height),
+                                    strokeWidth = s
+                                )
+                            }
+                        }
+                        .padding(
+                            horizontal = 14.dp,
+                            vertical = if (isActive) 10.dp else 9.dp
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (isActive) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(palette.primary)
                             )
                         }
-                    }
-                    .clickable(role = Role.Tab) { onSelectList(list.id) }
-                    .semantics { selected = isActive }
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 7.dp,
-                        bottom = if (isActive) 9.dp else 8.dp
-                    )
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    if (isActive) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(palette.primary)
+                        Text(
+                            text = list.name,
+                            fontSize = EditorialMetrics.ControlTextSize,
+                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
+                            color = if (isActive) palette.text else palette.muted,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = padCount(count),
+                            fontFamily = EditorialMono,
+                            fontSize = EditorialMetrics.CountTextSize,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isActive) palette.primary else palette.faint
                         )
                     }
-                    Text(
-                        text = list.name,
-                        fontSize = 12.sp,
-                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
-                        color = if (isActive) palette.text else palette.muted,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = padCount(count),
-                        fontFamily = EditorialMono,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isActive) palette.primary else palette.faint
-                    )
                 }
             }
         }
 
         // "+ 新册" Dashed Add Tab
-        val addShape = RoundedCornerShape(9.dp)
+        val addShape = RoundedCornerShape(EditorialMetrics.RadiusChip)
         Box(
             modifier = Modifier
-                .padding(bottom = 3.dp, start = 2.dp)
-                .clip(addShape)
-                .background(palette.surfaceWarm.copy(alpha = 0.5f))
-                .clickable(role = Role.Button, onClick = onManageLists)
-                .drawBehind {
-                    val r = 9.dp.toPx()
-                    drawRoundRect(
-                        color = palette.primary.copy(alpha = 0.45f),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(r, r),
-                        style = Stroke(
-                            width = 1.dp.toPx(),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f), 0f)
-                        )
-                    )
-                }
-                .padding(horizontal = 10.dp, vertical = 5.dp),
-            contentAlignment = Alignment.Center
+                .heightIn(min = EditorialMetrics.TouchTargetMin)
+                .widthIn(min = 76.dp)
+                .padding(start = 2.dp)
+                .clickable(role = Role.Button, onClick = onManageLists),
+            contentAlignment = Alignment.BottomCenter
         ) {
-            Text(
-                text = "＋ 新册",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = palette.primary
-            )
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 2.dp)
+                    .defaultMinSize(minWidth = 76.dp, minHeight = EditorialMetrics.CompactControlHeight)
+                    .clip(addShape)
+                    .background(palette.surfaceWarm.copy(alpha = 0.65f))
+                    .drawBehind {
+                        val r = EditorialMetrics.RadiusChip.toPx()
+                        drawRoundRect(
+                            color = palette.primary.copy(alpha = 0.52f),
+                            cornerRadius = CornerRadius(r, r),
+                            style = Stroke(
+                                width = 1.2.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f), 0f)
+                            )
+                        )
+                    }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "＋ 新册",
+                    fontSize = EditorialMetrics.ControlTextSize,
+                    fontWeight = FontWeight.Bold,
+                    color = palette.primary,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
@@ -749,110 +779,56 @@ private fun SheetRunningHeader(
     onSearch: (String) -> Unit
 ) {
     val palette = LocalEditorialPalette.current
+    val fontScale = LocalDensity.current.fontScale
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(palette.surfaceWarm)
     ) {
-        Row(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 9.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
-            // Left: Ledger Filter Buttons (待办 04 / 已归档 01)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                LedgerFilterButton(
-                    label = "待办",
-                    count = activeCount,
-                    selected = !completed,
-                    compatDesc = "未完成 $activeCount",
-                    onClick = { onCompleted(false) }
-                )
-                LedgerFilterButton(
-                    label = "已归档",
-                    count = completedCount,
-                    selected = completed,
-                    compatDesc = "已完成 $completedCount",
-                    onClick = { onCompleted(true) }
-                )
-            }
-
-            // Right: Compact Inline Search Box
-            Surface(
-                modifier = Modifier
-                    .widthIn(min = 126.dp, max = 168.dp)
-                    .height(30.dp),
-                shape = RoundedCornerShape(999.dp),
-                color = palette.surface,
-                border = BorderStroke(1.dp, palette.lineStrong)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 9.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+            val stacked = maxWidth < 288.dp || fontScale > 1.15f
+            if (stacked) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = "⌕",
-                        fontSize = 12.sp,
-                        color = palette.faint
+                    SegmentedFilterBar(
+                        completed = completed,
+                        activeCount = activeCount,
+                        completedCount = completedCount,
+                        onCompleted = onCompleted,
+                        fillWidth = true
                     )
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        BasicTextField(
-                            value = search,
-                            onValueChange = onSearch,
-                            singleLine = true,
-                            textStyle = TextStyle(
-                                fontSize = 12.sp,
-                                color = palette.text
-                            ),
-                            cursorBrush = SolidColor(palette.primary),
-                            decorationBox = { innerTextField ->
-                                Box(contentAlignment = Alignment.CenterStart) {
-                                    if (search.isEmpty()) {
-                                        Text(
-                                            text = "检索本页…",
-                                            fontSize = 12.sp,
-                                            color = palette.faint,
-                                            maxLines = 1
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .semantics { contentDescription = "检索本页…" }
-                        )
-                    }
-                    if (search.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clip(CircleShape)
-                                .background(palette.soft)
-                                .clickable { onSearch("") }
-                                .semantics { contentDescription = "清空搜索" },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "×",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = palette.muted,
-                                lineHeight = 11.sp
-                            )
-                        }
-                    }
+                    InlineSearchField(
+                        search = search,
+                        onSearch = onSearch,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SegmentedFilterBar(
+                        completed = completed,
+                        activeCount = activeCount,
+                        completedCount = completedCount,
+                        onCompleted = onCompleted,
+                        fillWidth = false
+                    )
+                    InlineSearchField(
+                        search = search,
+                        onSearch = onSearch,
+                        modifier = Modifier
+                            .weight(1f)
+                            .widthIn(min = 104.dp)
+                    )
                 }
             }
         }
@@ -865,45 +841,210 @@ private fun SheetRunningHeader(
 }
 
 @Composable
+private fun SegmentedFilterBar(
+    completed: Boolean,
+    activeCount: Int,
+    completedCount: Int,
+    onCompleted: (Boolean) -> Unit,
+    fillWidth: Boolean
+) {
+    val palette = LocalEditorialPalette.current
+    val trackBg = palette.soft.copy(alpha = 0.78f)
+    val trackBorder = palette.lineStrong
+    Row(
+        modifier = Modifier
+            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+            .drawBehind {
+                val insetY = 2.dp.toPx()
+                val trackHeight = (size.height - insetY * 2).coerceAtLeast(0f)
+                val r = 12.dp.toPx()
+                drawRoundRect(
+                    color = trackBg,
+                    topLeft = Offset(0f, insetY),
+                    size = Size(size.width, trackHeight),
+                    cornerRadius = CornerRadius(r, r)
+                )
+                drawRoundRect(
+                    color = trackBorder,
+                    topLeft = Offset(0f, insetY),
+                    size = Size(size.width, trackHeight),
+                    cornerRadius = CornerRadius(r, r),
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val itemModifier = if (fillWidth) Modifier.weight(1f) else Modifier
+        LedgerFilterButton(
+            label = "待办",
+            count = activeCount,
+            selected = !completed,
+            compatDesc = "未完成 $activeCount",
+            fillWidth = fillWidth,
+            onClick = { onCompleted(false) },
+            modifier = itemModifier
+        )
+        LedgerFilterButton(
+            label = "已归档",
+            count = completedCount,
+            selected = completed,
+            compatDesc = "已完成 $completedCount",
+            fillWidth = fillWidth,
+            onClick = { onCompleted(true) },
+            modifier = itemModifier
+        )
+    }
+}
+
+@Composable
+private fun InlineSearchField(
+    search: String,
+    onSearch: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val palette = LocalEditorialPalette.current
+    Box(
+        modifier = modifier.heightIn(min = EditorialMetrics.TouchTargetMin),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = EditorialMetrics.StandardControlHeight),
+            shape = RoundedCornerShape(EditorialMetrics.RadiusChip),
+            color = palette.surface,
+            border = BorderStroke(1.dp, palette.lineStrong)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = EditorialMetrics.StandardControlHeight)
+                    .padding(start = 10.dp, end = if (search.isNotEmpty()) 2.dp else 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "⌕",
+                    fontSize = 14.sp,
+                    color = palette.faint
+                )
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    BasicTextField(
+                        value = search,
+                        onValueChange = onSearch,
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            fontSize = EditorialMetrics.ControlTextSize,
+                            color = palette.text
+                        ),
+                        cursorBrush = SolidColor(palette.primary),
+                        decorationBox = { innerTextField ->
+                            Box(contentAlignment = Alignment.CenterStart) {
+                                if (search.isEmpty()) {
+                                    Text(
+                                        text = "检索本页…",
+                                        fontSize = EditorialMetrics.ControlTextSize,
+                                        color = palette.faint,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = "检索本页…" }
+                    )
+                }
+                if (search.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable { onSearch("") }
+                            .semantics { contentDescription = "清空搜索" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(palette.soft),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "×",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = palette.muted,
+                                lineHeight = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun LedgerFilterButton(
     label: String,
     count: Int,
     selected: Boolean,
     compatDesc: String,
-    onClick: () -> Unit
+    fillWidth: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val palette = LocalEditorialPalette.current
-    val shape = RoundedCornerShape(8.dp)
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.semantics {
-            role = Role.Tab
-            this.selected = selected
-            contentDescription = compatDesc
-        },
-        shape = shape,
-        color = if (selected) palette.surface else Color.Transparent,
-        border = if (selected) BorderStroke(1.dp, palette.lineStrong) else null,
-        shadowElevation = if (selected) 1.dp else 0.dp
+    val shape = RoundedCornerShape(EditorialMetrics.RadiusChip)
+    Box(
+        modifier = modifier
+            .heightIn(min = EditorialMetrics.TouchTargetMin)
+            .clickable(role = Role.Tab, onClick = onClick)
+            .semantics {
+                this.selected = selected
+                contentDescription = compatDesc
+            },
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        Surface(
+            modifier = Modifier
+                .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+                .padding(horizontal = 3.dp, vertical = 5.dp),
+            shape = shape,
+            color = if (selected) palette.surface else Color.Transparent,
+            border = if (selected) BorderStroke(1.dp, palette.lineStrong) else null,
+            shadowElevation = if (selected) 1.dp else 0.dp
         ) {
-            Text(
-                text = label,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (selected) palette.text else palette.muted
-            )
-            Text(
-                text = padCount(count),
-                fontFamily = EditorialMono,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (selected) palette.primary else palette.faint
-            )
+            Row(
+                modifier = Modifier
+                    .defaultMinSize(minHeight = EditorialMetrics.SegmentedItemHeight)
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
+            ) {
+                Text(
+                    text = label,
+                    fontSize = EditorialMetrics.ControlTextSize,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) palette.text else palette.muted,
+                    maxLines = 1
+                )
+                Text(
+                    text = padCount(count),
+                    fontFamily = EditorialMono,
+                    fontSize = EditorialMetrics.CountTextSize,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) palette.primary else palette.faint,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
@@ -948,7 +1089,7 @@ private fun NotebookPaperRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 54.dp)
+                .heightIn(min = EditorialMetrics.RowMinHeight)
                 .padding(end = 6.dp),
             verticalAlignment = Alignment.Top
         ) {
@@ -1015,7 +1156,7 @@ private fun NotebookPaperRow(
             // Right: Direct Pin Toggle Button (Diagonal Pushpin)
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(EditorialMetrics.TouchTargetMin)
                     .clickable(role = Role.Button, onClick = onTogglePin)
                     .semantics {
                         contentDescription = if (item.pinned) "取消置顶" else "置顶"
@@ -1025,7 +1166,7 @@ private fun NotebookPaperRow(
                 val pinColor = if (item.pinned) palette.primary else palette.faint.copy(alpha = 0.55f)
                 Canvas(
                     modifier = Modifier
-                        .size(14.dp)
+                        .size(15.dp)
                         .rotate(38f)
                 ) {
                     val w = size.width
@@ -1262,6 +1403,7 @@ private fun InkActionIsland(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .defaultMinSize(minHeight = EditorialMetrics.IslandHeight)
                 .padding(start = 10.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically

@@ -48,9 +48,13 @@ class WidgetRenderer(private val context: Context) {
         bind(views, R.id.widget_open, intents?.openList)
         bind(views, R.id.widget_add, intents?.add)
         bind(views, R.id.widget_header_add, intents?.add)
+        // Blank surface fallback: dedicated touchpoints above consume their own taps,
+        // so only non-interactive regions (gaps, padding, space below rows) reach the root.
+        bind(views, R.id.widget_root, intents?.add)
         val addLabel = "新增一条${list.name}记录"
         views.setContentDescription(R.id.widget_add, addLabel)
         views.setContentDescription(R.id.widget_header_add, addLabel)
+        views.setContentDescription(R.id.widget_root, "空白处点按，$addLabel")
 
         val visibleRows = rows.take(layout.capacity)
         val emptyText = when {
@@ -123,7 +127,9 @@ class WidgetRenderer(private val context: Context) {
         bind(views, R.id.widget_empty, retry)
         bind(views, R.id.widget_header_add, add)
         bind(views, R.id.widget_add, add)
+        bind(views, R.id.widget_root, add)
         views.setContentDescription(R.id.widget_header_add, "新增记录")
+        views.setContentDescription(R.id.widget_root, "空白处点按，新增记录")
         views.setTextViewText(R.id.widget_more, "重试")
         views.setTextColor(R.id.widget_more, palette.error)
         bind(views, R.id.widget_more, retry)

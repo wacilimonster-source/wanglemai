@@ -159,52 +159,22 @@ fun ManageListsScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Surface(
+                            ListRowActionButton(
+                                text = "改名",
+                                enabled = true,
+                                destructive = false,
                                 onClick = {
                                     name = list.name
                                     error = null
                                     renamingId = list.id
-                                },
-                                modifier = Modifier.heightIn(min = 32.dp),
-                                shape = RoundedCornerShape(9.dp),
-                                color = palette.soft,
-                                border = BorderStroke(1.dp, palette.lineStrong.copy(alpha = 0.65f))
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "改名",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = palette.text
-                                    )
                                 }
-                            }
-                            Surface(
-                                onClick = { if (!list.isDefault) deletingId = list.id },
+                            )
+                            ListRowActionButton(
+                                text = "删除",
                                 enabled = !list.isDefault,
-                                modifier = Modifier.heightIn(min = 32.dp),
-                                shape = RoundedCornerShape(9.dp),
-                                color = if (list.isDefault) palette.soft.copy(alpha = 0.5f) else palette.soft,
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (list.isDefault) palette.line else palette.lineStrong.copy(alpha = 0.65f)
-                                )
-                            ) {
-                                Box(
-                                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "删除",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (list.isDefault) palette.faint.copy(alpha = 0.55f) else palette.danger
-                                    )
-                                }
-                            }
+                                destructive = true,
+                                onClick = { if (!list.isDefault) deletingId = list.id }
+                            )
                         }
                     }
                     if (index < lists.lastIndex) {
@@ -225,15 +195,16 @@ fun ManageListsScreen(
                     Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .height(42.dp),
+                            .heightIn(min = EditorialMetrics.InlineInputHeight),
                         shape = RoundedCornerShape(12.dp),
                         color = palette.surface,
                         border = BorderStroke(1.dp, palette.lineStrong)
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 12.dp),
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = EditorialMetrics.InlineInputHeight)
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             if (inlineName.isEmpty()) {
@@ -311,7 +282,6 @@ fun ManageListsScreen(
                             }
                         },
                         modifier = Modifier
-                            .height(42.dp)
                             .shadow(
                                 elevation = 3.dp,
                                 shape = RoundedCornerShape(12.dp),
@@ -323,12 +293,14 @@ fun ManageListsScreen(
                         color = palette.primary
                     ) {
                         Box(
-                            modifier = Modifier.padding(horizontal = 14.dp),
+                            modifier = Modifier
+                                .defaultMinSize(minHeight = EditorialMetrics.InlineInputHeight)
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = "＋ 添一册",
-                                fontSize = 13.sp,
+                                fontSize = EditorialMetrics.ControlTextSize,
                                 fontWeight = FontWeight.Bold,
                                 color = palette.onPrimary
                             )
@@ -591,5 +563,43 @@ private fun ExLibrisStatItem(
             fontSize = 11.sp,
             color = palette.muted
         )
+    }
+}
+
+@Composable
+private fun ListRowActionButton(
+    text: String,
+    enabled: Boolean,
+    destructive: Boolean,
+    onClick: () -> Unit
+) {
+    val palette = LocalEditorialPalette.current
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(EditorialMetrics.RadiusChip),
+        color = if (!enabled) palette.soft.copy(alpha = 0.5f) else palette.soft,
+        border = BorderStroke(
+            1.dp,
+            if (!enabled) palette.line else palette.lineStrong.copy(alpha = 0.65f)
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .defaultMinSize(minHeight = EditorialMetrics.CompactControlHeight)
+                .padding(horizontal = 13.dp, vertical = 7.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = EditorialMetrics.ControlTextSize,
+                fontWeight = FontWeight.SemiBold,
+                color = when {
+                    !enabled -> palette.faint.copy(alpha = 0.55f)
+                    destructive -> palette.danger
+                    else -> palette.text
+                }
+            )
+        }
     }
 }

@@ -1,18 +1,29 @@
-# 忘了没 · Android MVP 交付 v0.4.0
+# 忘了没 · Android MVP 交付 v0.4.2
 
-日期：2026-11-15。状态：**v0.4.0 单一待办重构与活页手账视觉焕新已完成，并在 Android 16/API36 模拟器完成全部自动化验证与逐屏视觉比对**；模拟器 Launcher 已验证重启和覆盖安装后小部件恢复。澎湃 OS 3 真机普通桌面、API26/31、TalkBack 人工验收和性能目标仍未验证。已确认系统负一屏只接受小米小部件；因本项目不上架应用商店，小米小部件准入不成立，**负一屏取消开发**。
+日期：2026-11-15。状态：**v0.4.2 自适应图标与桌面触点完善已发布，MuMu（Android 15 / API 35）全量自动化验证通过**；v0.4.0 的逐屏视觉比对与模拟器 Launcher 小部件恢复验证仍然有效。澎湃 OS 3 真机普通桌面、API26/31、TalkBack 人工验收和性能目标仍未验证。已确认系统负一屏只接受小米小部件；因本项目不上架应用商店，小米小部件准入不成立，**负一屏取消开发**。
 
 ## 当前交付
 
 - GitHub 仓库：<https://github.com/wacilimonster-source/wanglemai>
 - GitHub Releases（检查更新使用）：<https://github.com/wacilimonster-source/wanglemai/releases>
 - 原生工程：`app/`，Kotlin + Jetpack Compose/Material3 + Room + Coroutines/StateFlow。
-- Debug APK：[wanglemai-0.4.0-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.4.0/wanglemai-0.4.0-debug.apk)（versionCode 11，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
-- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.4.0 APK SHA256 见 SHA256SUMS。
+- Debug APK：[wanglemai-0.4.2-debug.apk](https://github.com/wacilimonster-source/wanglemai/releases/download/v0.4.2/wanglemai-0.4.2-debug.apk)（versionCode 13，applicationId `com.wanglemai.app`，minSdk26 / compile+targetSdk36）。
+- 校验和：[SHA256SUMS.txt](releases/SHA256SUMS.txt)；v0.4.2 APK SHA256 见 SHA256SUMS。
 - 实测记录：[开发记录](docs/development-log.md)、[验收记录](docs/03-acceptance.md)、[框架状态](docs/07-framework-status.md)。
 - 自动化证据：[构建与 JVM](docs/evidence/android-build-0.3.5.txt)、[设备测试](docs/evidence/android-instrumentation-0.3.5.txt)、[摘要 JSON](docs/evidence/android-test-summary-0.3.5.json)（v0.3.5 基准记录；v0.4.0 实测见 [开发记录](docs/development-log.md)）。
 
-## 本版改进（v0.4.0）
+## 本版改进（v0.4.2）
+
+- **自适应启动图标**：`ic_launcher` / `ic_launcher_round` 三层自适应图标（深烘炭墨底 + 斜置叠层便签 + 朱砂索引耳），Android 13+ 支持单色主题图标（Material You 着色）。
+- **小部件空白区点按新增**：点按小部件空白区域（触点之外的间隙、行下方留白与边缘）等同"＋记一条"，直接打开快速录入；既有触点自身消费点击、不冒泡。
+- **小部件编辑器关闭回桌面**：从桌面小部件进入编辑器，保存、删除或收起后回到桌面，不再把后台 App 主界面带到前台；从 App 内进入的行为不变。
+- **EditorialMetrics 尺寸令牌统一**：全 App 最小触控目标 48dp、按钮改为 `heightIn(min=…)` 自适应大字体；设置/清单管理/小部件配置页按钮收敛为共享组件，交互尺寸与圆角/字号全部走共享令牌。
+
+## v0.4.1 改动
+
+v0.4.0 全量代码评审修复 `CR-01`~`CR-16`：备份导出防残留损坏、BOM 兼容、备份合并与跨清单排序追加、幂等命令表清理、协程异常与取消传播兜底、更新模块并发与完整性加固、Widget 恢复/配置解耦、清单状态与旋转保活等，详见 [Release 说明](docs/release-notes-0.4.1.md) 与 [评审记录](docs/code-review-2026-11-15.md)。
+
+## v0.4.0 改动
 
 - **日式活页手账视觉焕新（Editorial Edition）**：参照 [prototype/warm/index.html](prototype/warm/index.html) 全面重构五屏 Compose UI 与 Widget 细节——道林暖白 / 深烘炭墨双色板、三层叠页卡片、朱砂双线日历印章、无缝衔接的阶梯活页索引耳、44dp 贯穿朱砂边线 + 45° 菱形复选框、点阵撕页快记、书签分册目录与 `EX LIBRIS` 藏书印记、桌面壁纸仿真小组件配置预览及罗马数字设置页。
 - 移除「待买」类型，只保留待办：底部导航、编辑器数量/单位、小部件数量列与相关文案全部删除。
@@ -36,7 +47,7 @@ v0.3.2小部件精修与验证见 [精修规格](docs/widget-refinement/design-s
 - Room 长期草稿：300ms debounce、onStop 补写、草稿恢复/丢弃、编辑冲突不静默覆盖、保存成功才清除。
 - 标准/大号两种 AppWidget，各自可绑定任意清单并独立设置主题（跟随系统/浅色/深色）与舒适、紧凑、超紧凑三档密度。支持两排桌面高度，舒适按尺寸保留底栏，紧凑把操作收进标题栏，舒适/紧凑48dp、超紧凑36dp完成触区，按空间显示最多 12 条。暖调半透明玻璃底色采用浅色奶油 92% / 深色暖棕 90%、局部顶部高光和细描边，圆角跟随系统。配置预览复用真实 RemoteViews，保留多实例独立、刷新、完成撤销和错误反馈；空态区分“全部完成”与“空清单”，选择器使用带示例记录的静态预览，开机/覆盖安装/回到 App 时主动刷新。详见 [小部件精修规格](docs/widget-refinement/design-spec.md)。
 - 暖米色视觉体系（2026-11 提案 v1，见 docs/visual-refresh/）：奶油底 + 暖纸白内容面 + 焦糖棕主色，圆形完成控件、分段筛选、整宽新增入口、24dp 线性矢量图标；浅/深两套显式 token。
-- Widget 的新增/正文/标题点击直接通过 `PendingIntent.getActivity` 进入 `QuickEntryActivity`，没有 Receiver/Service 间接启动编辑页。
+- Widget 的新增/正文/标题/空白区点击直接通过 `PendingIntent.getActivity` 进入 `QuickEntryActivity`，没有 Receiver/Service 间接启动编辑页；从小部件进入的编辑器运行在独立 on-home 任务，关闭后回桌面。
 - SAF JSON 导出与导入：5MB 上限、严格 schema 校验、预览数量、事务合并、同 ID 保留本机、名称冲突加“（导入N）”、失败不部分写库。
 - 浅/深色主题；应用主题可跟随系统或显式切换。
 - 设置页“检查更新”：GitHub Releases API 优先，失败时回退到 jsDelivr 静态清单；发现新版本后在客户端内直接下载安装包（国内加速优先，失败自动改用 GitHub），下载时流式校验 SHA256，完成后由用户确认调起系统安装器。仅手动触发，无后台轮询。
@@ -53,7 +64,7 @@ adb -s emulator-5554 install -r app\build\outputs\apk\androidTest\debug\app-debu
 adb -s emulator-5554 shell am instrument -w -r com.wanglemai.app.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-实际结果：JVM 67/67 通过；设备 47/47 完整重跑通过（API36 模拟器；v0.4.0 新增 `MigrationTest` 与旧备份导入用例）。首轮曾出现一次 `appCanCreateEditAndPersistRecord` 未在 10 秒内定位新记录的偶发失败，单例重跑与完整重跑均通过；不以首轮结果冒充全绿。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
+实际结果（v0.4.2）：JVM 72/72 通过；设备 53/53 完整重跑通过（MuMu `LGE-AN10`，Android 15 / API 35）。历史上首轮仪器测试偶发过一次 10 秒内未定位新记录的失败，单例重跑通过；不以单例结果冒充全绿。Gradle 的 `connectedDebugAndroidTest` 在当前环境可能回传 “Failed to receive the UTP test results”，但测试 XML 为 0 失败；以 `am instrument` 输出为准。
 
 ## 发布新版本（GitHub Actions）
 

@@ -165,8 +165,8 @@ fun SettingsScreen(
                     color = palette.muted
                 )
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     ThemeMode.entries.forEach { mode ->
                         val label = when (mode) {
@@ -226,6 +226,7 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 64.dp)
                         .clickable(onClick = onManageLists)
                         .padding(14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -249,7 +250,7 @@ fun SettingsScreen(
                     }
                     Text(
                         text = "进入 ›",
-                        fontSize = 12.sp,
+                        fontSize = EditorialMetrics.ControlTextSize,
                         fontWeight = FontWeight.Bold,
                         color = palette.primary
                     )
@@ -292,7 +293,7 @@ fun SettingsScreen(
                         .padding(top = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    PaperActionBtn(
+                    EditorialActionButton(
                         text = "↓ 导出 JSON 备份",
                         enabled = !busy,
                         onClick = {
@@ -303,7 +304,7 @@ fun SettingsScreen(
                             .weight(1f)
                             .semantics { contentDescription = "导出备份" }
                     )
-                    PaperActionBtn(
+                    EditorialActionButton(
                         text = "↑ 从文件恢复预览",
                         enabled = !busy,
                         onClick = {
@@ -384,7 +385,7 @@ fun SettingsScreen(
                     color = palette.muted,
                     lineHeight = 18.sp
                 )
-                PaperActionBtn(
+                EditorialActionButton(
                     text = if (updateBusy) "检查中…" else "检查更新",
                     enabled = !updateBusy,
                     onClick = { updateCenter.check(currentVersion) },

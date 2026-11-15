@@ -225,8 +225,8 @@ class WidgetConfigureActivity : ComponentActivity() {
                                 color = palette.text
                             )
                             FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(7.dp),
-                                verticalArrangement = Arrangement.spacedBy(7.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 lists.forEach { list ->
                                     EditorialChoiceChip(
@@ -254,8 +254,8 @@ class WidgetConfigureActivity : ComponentActivity() {
                                 color = palette.text
                             )
                             FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(7.dp),
-                                verticalArrangement = Arrangement.spacedBy(7.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 ThemeMode.entries.forEach { option ->
                                     val label = when (option) {
@@ -299,8 +299,8 @@ class WidgetConfigureActivity : ComponentActivity() {
                                 color = palette.muted
                             )
                             FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(7.dp),
-                                verticalArrangement = Arrangement.spacedBy(7.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 WidgetDensity.entries.forEach { option ->
                                     val label = when (option) {
@@ -355,21 +355,24 @@ class WidgetConfigureActivity : ComponentActivity() {
                             enabled = btnEnabled,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(46.dp)
+                                .heightIn(min = EditorialMetrics.PrimaryButtonHeight)
                                 .shadow(
                                     elevation = if (btnEnabled) 4.dp else 0.dp,
-                                    shape = RoundedCornerShape(13.dp),
+                                    shape = RoundedCornerShape(EditorialMetrics.RadiusButton),
                                     ambientColor = palette.primary.copy(alpha = 0.4f),
                                     spotColor = palette.primary.copy(alpha = 0.4f)
                                 )
                                 .semantics { contentDescription = "保存并添加" },
-                            shape = RoundedCornerShape(13.dp),
+                            shape = RoundedCornerShape(EditorialMetrics.RadiusButton),
                             color = if (btnEnabled) palette.primary else palette.soft
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier.defaultMinSize(minHeight = EditorialMetrics.PrimaryButtonHeight),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
                                     text = if (busy) "保存中…" else "保存并置入桌面",
-                                    fontSize = 14.sp,
+                                    fontSize = EditorialMetrics.ButtonTextSize,
                                     fontWeight = FontWeight.Bold,
                                     color = if (btnEnabled) palette.onPrimary else palette.faint
                                 )

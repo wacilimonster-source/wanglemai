@@ -1,5 +1,6 @@
 package com.wanglemai.app
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import androidx.core.view.WindowInsetsCompat
@@ -78,6 +79,30 @@ class FrameworkUiTest {
         while (System.currentTimeMillis() < deadline) { if (block()) return; Thread.sleep(100) }
         assertTrue("Condition timed out", block())
     }
+    /** Foreground activity's package from the activity manager, not the a11y active window. */
+    private fun topResumedPackage(): String =
+        device.executeShellCommand("dumpsys activity activities")
+            .lineSequence().firstOrNull { "topResumedActivity" in it }
+            ?.substringAfter(" u0 ")?.substringBefore("/")?.trim().orEmpty()
+
+    /** The resolved default HOME package; UiDevice.launcherPackageName can misreport. */
+    private fun homePackage(): String =
+        device.executeShellCommand(
+            "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"
+        ).lineSequence().lastOrNull { it.isNotBlank() }?.substringBefore("/")?.trim().orEmpty()
+
+    private fun bringToFront(scenario: ActivityScenario<out android.app.Activity>) {
+        var taskId = 0
+        scenario.onActivity { taskId = it.taskId }
+        val uiAutomation = instrumentation.uiAutomation
+        uiAutomation.adoptShellPermissionIdentity()
+        try {
+            context.getSystemService(android.app.ActivityManager::class.java).moveTaskToFront(taskId, 0)
+        } finally {
+            uiAutomation.dropShellPermissionIdentity()
+        }
+    }
+
     private suspend fun awaitRepo(block: suspend () -> Boolean) {
         val deadline = System.currentTimeMillis() + 10_000
         while (System.currentTimeMillis() < deadline) {
@@ -704,10 +729,32 @@ class FrameworkUiTest {
             tap("已完成 · 撤销")
             awaitCondition { runBlocking { !container.repository.getItem(itemId)!!.completed } }
             awaitCondition { device.findObjects(By.text(title)).size == 2 }
+            // Blank surface (bottom padding strip below the rows) must behave like the add button.
+            val blank = device.wait(Until.findObject(By.desc("空白处点按，新增一条${listName}记录")), 10_000)
+            assertNotNull(blank)
+            val surface = blank.visibleBounds
+            device.click(surface.centerX(), surface.bottom - 16)
+            find("想到，就落笔。")
+            focusedEditor().text = "$title 空白新增"
+            tap("入册保存")
+            // The widget editor finishes to the desktop; bring the host back before UI checks.
+            awaitRepo {
+                container.repository.observeItems(listId, false, "$title 空白新增").first().isNotEmpty()
+            }
+            bringToFront(scenario!!)
+            awaitCondition { topResumedPackage() == context.packageName }
+            awaitCondition { device.findObjects(By.text("$title 空白新增")).size == 2 }
+            val blankEntry = container.repository.observeItems(listId, false, "$title 空白新增").first().single()
+            container.mutate { container.repository.delete(blankEntry.id, blankEntry.version) }
             device.wait(Until.findObject(By.desc("新增一条${listName}记录")), 10_000).click()
             find("想到，就落笔。")
             focusedEditor().text = "$title 快速新增"
             tap("入册保存")
+            awaitRepo {
+                container.repository.observeItems(listId, false, "$title 快速新增").first().isNotEmpty()
+            }
+            bringToFront(scenario)
+            awaitCondition { topResumedPackage() == context.packageName }
             awaitCondition { device.findObjects(By.text("$title 快速新增")).size == 2 }
             val extra = container.repository.observeItems(listId, false, "$title 快速新增").first().single()
             container.mutate { container.repository.delete(extra.id, extra.version) }
@@ -720,6 +767,59 @@ class FrameworkUiTest {
             container.repository.list(listId)?.let {
                 container.repository.deleteListAndMoveToDefault(it.id, it.version)
             }
+        }
+        Unit
+    }
+
+    @Test fun widgetEditorReturnsToLauncherAfterSaveAndDelete() = runBlocking {
+        resetSelection()
+        val stamp = System.currentTimeMillis() % 1_000_000
+        val title = "桌面返回$stamp"
+        var scenario: ActivityScenario<MainActivity>? = null
+        try {
+            // The app task must exist in the background: a widget editor that joined it would
+            // reveal MainActivity on finish instead of the desktop (default-affinity NEW_TASK).
+            scenario = ActivityScenario.launch(Intent(context, MainActivity::class.java))
+            device.pressHome()
+            val launcher = homePackage()
+            assertTrue("No HOME resolver found", launcher.isNotBlank())
+            awaitCondition { topResumedPackage() == launcher }
+
+            fun openWidgetEditor(itemId: String?) {
+                val intent = if (itemId == null) QuickEntryActivity.createIntent(context, DEFAULT_TODO, 1)
+                    else QuickEntryActivity.editIntent(context, itemId, 1)
+                // PI.send() from the instrumentation is BAL-blocked while the launcher is
+                // foreground; instrumentation starts are exempt and carry the same flags.
+                instrumentation.startActivitySync(intent)
+            }
+
+            openWidgetEditor(null)
+            find("想到，就落笔。")
+            focusedEditor().text = title
+            tap("入册保存")
+            awaitCondition { topResumedPackage() == launcher }
+            val created = container.repository.observeItems(DEFAULT_TODO, false, title).first().single()
+
+            openWidgetEditor(created.id)
+            find("修订这页便签")
+            focusedEditor().text = "$title 修订"
+            tap("保存修订")
+            awaitCondition { topResumedPackage() == launcher }
+            awaitRepo {
+                container.repository.observeItems(DEFAULT_TODO, false, "$title 修订").first().size == 1
+            }
+
+            openWidgetEditor(created.id)
+            find("修订这页便签")
+            tap("撕下删除")
+            tap("删除")
+            awaitCondition { topResumedPackage() == launcher }
+            awaitRepo {
+                container.repository.observeItems(DEFAULT_TODO, false, "$title 修订").first().isEmpty()
+            }
+        } finally {
+            scenario?.close()
+            deleteBySearch(DEFAULT_TODO, title)
         }
         Unit
     }

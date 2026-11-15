@@ -165,11 +165,14 @@ class WidgetRenderingTest {
             assertEquals(View.GONE, root.findViewById<View>(R.id.widget_footer).visibility)
             assertTrue(root.findViewById<View>(R.id.row_title).contentDescription.contains("事项 1"))
             assertEquals(View.VISIBLE, root.findViewById<View>(R.id.row_pin).visibility)
+            assertTrue(root.hasOnClickListeners())
+            assertTrue(root.contentDescription.toString().contains("空白处点按"))
             assertGeometry(context, root)
             val error = renderer.error(true, layout, pending, pending).apply(context, FrameLayout(context))
             measure(context, SizeF(180f, 170f), error)
             assertTrue(error.findViewById<View>(R.id.widget_open).hasOnClickListeners())
             assertTrue(error.findViewById<View>(R.id.widget_header_add).hasOnClickListeners())
+            assertTrue(error.hasOnClickListeners())
         }
     }
 

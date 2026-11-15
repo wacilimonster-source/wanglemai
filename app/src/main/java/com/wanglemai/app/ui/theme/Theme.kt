@@ -104,6 +104,31 @@ val LocalEditorialPalette = staticCompositionLocalOf { LightEditorialPalette }
 val EditorialSerif = FontFamily.Serif
 val EditorialMono = FontFamily.Monospace
 
+/**
+ * Shared dimensional, touch-target, radius, and typography tokens for the Editorial UI.
+ */
+object EditorialMetrics {
+    val TouchTargetMin = 48.dp
+    val PrimaryButtonHeight = 48.dp
+    val IslandHeight = 52.dp
+    val StandardControlHeight = 40.dp
+    val CompactControlHeight = 38.dp
+    val SegmentedItemHeight = 38.dp
+    val InlineInputHeight = 44.dp
+    val RowMinHeight = 56.dp
+
+    val RadiusBadge = 4.dp
+    val RadiusChip = 10.dp
+    val RadiusControl = 11.dp
+    val RadiusButton = 13.dp
+    val RadiusCard = 18.dp
+
+    val ControlTextSize = 13.sp
+    val ButtonTextSize = 14.sp
+    val CountTextSize = 11.sp
+    val MonoBadgeTextSize = 10.sp
+}
+
 // Editorial Paper Craft palette synced with prototype/warm/styles.css
 private val Light = lightColorScheme(
     primary = Color(0xFF9A4B26), onPrimary = Color(0xFFFFFAF4),

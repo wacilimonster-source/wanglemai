@@ -25,6 +25,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wanglemai.app.app
+import com.wanglemai.app.ui.theme.EditorialActionButton
+import com.wanglemai.app.ui.theme.EditorialMetrics
 import com.wanglemai.app.ui.theme.EditorialSerif
 import com.wanglemai.app.ui.theme.LocalEditorialPalette
 import com.wanglemai.app.widget.ListLargeProvider
@@ -78,13 +80,13 @@ internal fun WidgetPinControls(busy: Boolean, scope: CoroutineScope, snack: Snac
             .padding(top = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        PaperActionBtn(
+        EditorialActionButton(
             text = "添加标准清单",
             enabled = !busy && state.status != WidgetPinStatus.REQUESTING,
             onClick = { add(ListSmallProvider::class.java) },
             modifier = Modifier.weight(1f)
         )
-        PaperActionBtn(
+        EditorialActionButton(
             text = "添加大清单",
             enabled = !busy && state.status != WidgetPinStatus.REQUESTING,
             onClick = { add(ListLargeProvider::class.java) },
@@ -144,15 +146,15 @@ internal fun WidgetPinControls(busy: Boolean, scope: CoroutineScope, snack: Snac
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         TextButton(
             onClick = { showHelp = true },
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            Text("添加无响应？", fontSize = 12.sp, color = palette.primary)
+            Text("添加无响应？", fontSize = EditorialMetrics.ControlTextSize, color = palette.primary)
         }
         TextButton(
             onClick = { showManual = true },
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            Text("从系统桌面添加", fontSize = 12.sp, color = palette.primary)
+            Text("从系统桌面添加", fontSize = EditorialMetrics.ControlTextSize, color = palette.primary)
         }
     }
 
@@ -210,37 +212,5 @@ internal fun WidgetPinControls(busy: Boolean, scope: CoroutineScope, snack: Snac
             },
             dismissButton = { TextButton(onClick = { showManual = false }) { Text("知道了") } }
         )
-    }
-}
-
-@Composable
-internal fun PaperActionBtn(
-    text: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val palette = LocalEditorialPalette.current
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.heightIn(min = 38.dp),
-        shape = RoundedCornerShape(10.dp),
-        color = palette.surfaceWarm,
-        contentColor = palette.primary,
-        border = BorderStroke(1.dp, palette.primary.copy(alpha = 0.35f)),
-        shadowElevation = 1.dp
-    ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = text,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (enabled) palette.primary else palette.faint
-            )
-        }
     }
 }

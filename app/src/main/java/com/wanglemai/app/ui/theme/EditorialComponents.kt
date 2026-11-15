@@ -122,10 +122,11 @@ fun TactileButton(
     compact: Boolean = false
 ) {
     val palette = LocalEditorialPalette.current
-    val shape = RoundedCornerShape(if (compact) 8.dp else 11.dp)
+    val shape = RoundedCornerShape(if (compact) EditorialMetrics.RadiusChip else EditorialMetrics.RadiusControl)
+    val visualMinHeight = if (compact) EditorialMetrics.CompactControlHeight else EditorialMetrics.StandardControlHeight
     Surface(
         onClick = onClick,
-        modifier = modifier.heightIn(min = if (compact) 30.dp else 36.dp),
+        modifier = modifier,
         shape = shape,
         color = palette.surfaceWarm,
         contentColor = palette.text,
@@ -133,22 +134,58 @@ fun TactileButton(
         shadowElevation = 1.dp
     ) {
         Row(
-            modifier = Modifier.padding(
-                horizontal = if (compact) 10.dp else 11.dp,
-                vertical = if (compact) 5.dp else 7.dp
-            ),
+            modifier = Modifier
+                .defaultMinSize(minHeight = visualMinHeight)
+                .padding(
+                    horizontal = if (compact) 12.dp else 13.dp,
+                    vertical = if (compact) 7.dp else 8.dp
+                ),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (leadingIcon != null) {
                 leadingIcon()
             }
             Text(
                 text = text,
-                fontSize = 12.sp,
+                fontSize = EditorialMetrics.ControlTextSize,
                 fontWeight = FontWeight.SemiBold,
                 color = palette.text,
                 maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+fun EditorialActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val palette = LocalEditorialPalette.current
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        shape = RoundedCornerShape(EditorialMetrics.RadiusControl),
+        color = palette.surfaceWarm,
+        contentColor = palette.primary,
+        border = BorderStroke(1.dp, palette.primary.copy(alpha = 0.35f)),
+        shadowElevation = 1.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .defaultMinSize(minHeight = 42.dp)
+                .padding(horizontal = 14.dp, vertical = 9.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = EditorialMetrics.ControlTextSize,
+                fontWeight = FontWeight.Bold,
+                color = if (enabled) palette.primary else palette.faint
             )
         }
     }
@@ -166,19 +203,25 @@ fun EditorialBackButton(
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = "返回"
         },
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(EditorialMetrics.RadiusChip),
         color = palette.surface,
         contentColor = palette.primary,
         border = BorderStroke(1.dp, palette.lineStrong),
         shadowElevation = 1.dp
     ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = palette.primary
-        )
+        Box(
+            modifier = Modifier
+                .defaultMinSize(minHeight = EditorialMetrics.CompactControlHeight)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = EditorialMetrics.ControlTextSize,
+                fontWeight = FontWeight.Bold,
+                color = palette.primary
+            )
+        }
     }
 }
 
@@ -194,15 +237,15 @@ fun StampBadge(
     val textColor = if (muted) palette.muted else palette.primary
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(EditorialMetrics.RadiusBadge))
             .background(bgColor)
-            .border(1.dp, borderColor, RoundedCornerShape(4.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(EditorialMetrics.RadiusBadge))
             .padding(horizontal = 5.dp, vertical = 1.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            fontSize = 10.sp,
+            fontSize = EditorialMetrics.MonoBadgeTextSize,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.6.sp,
             color = textColor,
@@ -222,15 +265,15 @@ fun DiamondCheckbox(
     Box(
         modifier = modifier
             .width(44.dp)
-            .heightIn(min = 48.dp)
+            .heightIn(min = EditorialMetrics.TouchTargetMin)
             .clickable(role = Role.Checkbox, onClick = onToggle)
             .semantics { contentDescription = contentDesc },
         contentAlignment = Alignment.Center
     ) {
-        val diamondShape = RoundedCornerShape(4.dp)
+        val diamondShape = RoundedCornerShape(EditorialMetrics.RadiusBadge)
         Box(
             modifier = Modifier
-                .size(17.dp)
+                .size(18.dp)
                 .rotate(45f)
                 .clip(diamondShape)
                 .background(if (checked) palette.primary else palette.surface)
@@ -259,7 +302,7 @@ fun EditorialChoiceChip(
     modifier: Modifier = Modifier
 ) {
     val palette = LocalEditorialPalette.current
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(EditorialMetrics.RadiusChip)
     Surface(
         onClick = onClick,
         modifier = modifier.semantics {
@@ -276,13 +319,15 @@ fun EditorialChoiceChip(
         shadowElevation = 0.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            modifier = Modifier
+                .defaultMinSize(minHeight = EditorialMetrics.CompactControlHeight)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             Text(
                 text = label,
-                fontSize = 12.sp,
+                fontSize = EditorialMetrics.ControlTextSize,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
                 color = if (selected) palette.primary else palette.muted
             )

@@ -1,5 +1,17 @@
 # Android 开发与交接记录
 
+## v0.4.2 · 自适应图标与桌面触点完善 / 2026-11-15
+
+v0.4.1 之后的交互打磨版本：自适应启动图标、小部件空白区点按新增、小部件编辑器关闭去向（独立任务）与 `EditorialMetrics` 尺寸令牌统一。
+
+- **自适应启动图标**：新增 `mipmap-anydpi-v26/ic_launcher.xml` / `ic_launcher_round.xml`（background / foreground / monochrome 三层）。`ic_launcher_foreground` 延续 Editorial 视觉——-4.5° 斜置叠层便签 + 右上朱砂索引耳 + 咖啡色投影；`ic_launcher_background` 深烘炭墨底；`ic_launcher_monochrome` 提供单色路径层，Android 13+ 支持桌面主题图标着色。Manifest 启动图标由 `@drawable/ic_app` 切换为 `@mipmap/ic_launcher` + `roundIcon`；`ic_app.xml` 重绘为与新图标同款的 48dp 矢量徽标（当前代码无引用，作为应用内素材保留）。minSdk 26，`anydpi-v26` 全覆盖，无需 PNG 回退。
+- **小部件空白区点按新增**：`WidgetRenderer` 将新增 PendingIntent 绑定到 `widget_root` 并设置"空白处点按，新增…"内容描述；行、圆形完成按钮、标题、页脚等既有触点自身消费点击、不冒泡到根布局，正常态与错误态均生效。`docs/01-product.md` 同步该触点定义。
+- **小部件编辑器关闭去向**：`QuickEntryActivity` 使用独立 taskAffinity `com.wanglemai.app.editor`；`createIntent` / `editIntent` 在携带 `origin_widget_id` 时附加 `FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_TASK_ON_HOME`——入册保存、保存修订、撕下删除或收起后回到桌面，不会把后台 App 主界面带到前台；App 内调用不带 Flag，仍回到调用者任务。
+- **EditorialMetrics 尺寸令牌统一**：`Theme.kt` 新增 `EditorialMetrics`（最小触控目标/主按钮 48dp、悬浮岛 52dp、标准/紧凑控件 40/38dp、行内输入 44dp、行高 56dp、圆角 4/10/11/13/18dp、字号 13/14/11/10sp），替换五屏与小部件配置页中散落的魔法数；按钮固定高度改为 `heightIn(min=…)` + `defaultMinSize`，200% 字体下不再裁切。设置页 `PaperActionBtn` 收敛为 `EditorialComponents.EditorialActionButton`；清单管理页行内"改名/删除"收敛为 `ListRowActionButton`；MainActivity 抽出 `SegmentedFilterBar` 与 `InlineSearchField`；各页 FlowRow 间距统一 8dp/2dp。
+- **测试补充**：`FrameworkUiTest` 新增 `widgetEditorReturnsToLauncherAfterSaveAndDelete`（先在后台持有 App 任务，再从桌面态经小部件编辑器完成新增保存/修订/删除，逐一以 `dumpsys topResumedActivity` 断言回到桌面 HOME 包）与空白区点按新增端到端断言；新增 `topResumedPackage()` / `homePackage()` / `bringToFront()` 辅助（shell 权限读栈顶、resolve HOME、`moveTaskToFront`）。`WidgetRenderingTest` 补充正常态/错误态根布局点击监听与"空白处点按"内容描述断言。
+
+- **验证**：`:app:testDebugUnitTest` `72/72` 通过；`:app:lintDebug` `0 error`（仅既有 `OldTargetApi` 提示）；MuMu（`LGE-AN10`，Android 15 / API 35）全量仪器测试 `53/53` 通过（`FrameworkUiTest` 17、`RepositoryTest` 23、`WidgetRenderingTest` 9、`WidgetPinTest` 3、`MigrationTest` 1，耗时 447.5s），证据见 [android-instrumentation-0.4.2.txt](evidence/android-instrumentation-0.4.2.txt)。
+
 ## v0.4.1 · 代码评审修复与稳定性增强 / 2026-11-15
 
 针对 `v0.4.0` 全量源码开展系统代码评审，记录 `CR-01` ~ `CR-16` 问题清单（[code-review-2026-11-15.md](code-review-2026-11-15.md)）并逐项完成修复与回归测试：
